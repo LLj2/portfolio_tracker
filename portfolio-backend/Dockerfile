@@ -12,13 +12,13 @@ RUN apt-get update && apt-get install -y \
 RUN groupadd -r portfolio && useradd -r -g portfolio portfolio
 
 # Copy requirements first for better caching
-COPY backend/requirements.txt .
+COPY portfolio-backend/backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY backend/ ./backend/
+COPY portfolio-backend/backend/ ./backend/
 
 # Copy frontend files
 COPY portfolio-frontend/ ./frontend/

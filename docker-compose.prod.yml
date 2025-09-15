@@ -3,7 +3,7 @@ version: "3.9"
 services:
   portfolio:
     # Prefer a versioned image for repeatable deploys/rollbacks
-    image: ghcr.io/your-org/portfolio-tracker:1.0.0  # <-- change to your registry/tag
+    image: ghcr.io/llj2/portfolio-tracker:v1.0.4  # <-- change version as needed
     env_file: .env
 
     # Private bind: reachable only via Tailscale (no public ports)
