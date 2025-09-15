@@ -19,7 +19,11 @@ jobs:
         run: |
           OWNER="${GITHUB_REPOSITORY%/*}"
           IMAGE="ghcr.io/${OWNER}/portfolio-tracker"
-          TAG="${GITHUB_REF_TYPE == 'tag' && GITHUB_REF_NAME || 'main'}"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            TAG="main"
+          fi
           echo "image=${IMAGE}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
