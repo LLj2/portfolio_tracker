@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import text
 from typing import List
 from . import db, schemas, performance, rebalancing
 from .ingest import csv_import
@@ -93,7 +94,7 @@ def health_check():
     try:
         # Test database connectivity
         with db.SessionLocal() as s:
-            s.execute("SELECT 1")
+            s.execute(text("SELECT 1"))
         return {
             "status": "healthy",
             "service": "portfolio-tracker",
