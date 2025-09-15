@@ -1,0 +1,2302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #334155;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* App Shell */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        /* Top App Bar */
+        .app-bar {
+            background: #1e293b;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .app-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .app-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .refresh-btn {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .refresh-btn:hover {
+            background: #2563eb;
+        }
+        
+        .user-menu {
+            background: #64748b;
+            border: none;
+            color: white;
+            padding: 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            padding-bottom: 80px; /* Space for bottom nav */
+        }
+        
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            padding: 8px 0;
+            z-index: 100;
+        }
+        
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 8px 4px;
+            cursor: pointer;
+            transition: color 0.2s;
+            color: #64748b;
+        }
+        
+        .nav-item.active {
+            color: #3b82f6;
+        }
+        
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
+        .nav-label {
+            font-size: 12px;
+        }
+        
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .card-content {
+            padding: 16px;
+        }
+        
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        /* Value Badges */
+        .value-badge {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        
+        .value-badge.large {
+            font-size: 32px;
+        }
+        
+        .delta-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .delta-badge.positive {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .delta-badge.negative {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        .freshness-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .freshness-chip.ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .freshness-chip.stale {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        
+        /* Dashboard Specific */
+        .total-value-card {
+            text-align: center;
+            padding: 24px;
+        }
+        
+        .allocation-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .donut-container {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .targets-container {
+            padding: 20px;
+        }
+        
+        .asset-list {
+            space-y: 8px;
+        }
+        
+        .asset-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+        }
+        
+        .asset-item:last-child {
+            border-bottom: none;
+        }
+        
+        .asset-item:hover {
+            background: #f8fafc;
+            margin: 0 -16px;
+            padding-left: 16px;
+            padding-right: 16px;
+        }
+        
+        .asset-name {
+            font-weight: 500;
+        }
+        
+        .asset-details {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .asset-value {
+            font-weight: 600;
+            color: #059669;
+        }
+        
+        .asset-weight {
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .action-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .action-btn:hover {
+            background: #e2e8f0;
+        }
+        
+        .action-btn.primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .action-btn.primary:hover {
+            background: #2563eb;
+        }
+        
+        /* Alerts */
+        .alerts-card {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+        }
+        
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            cursor: pointer;
+        }
+        
+        .alert-item:hover {
+            text-decoration: underline;
+        }
+        
+        /* Auth Form */
+        .auth-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .auth-card {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 400px;
+            margin: 16px;
+        }
+        
+        .auth-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #1e293b;
+        }
+        
+        .auth-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .auth-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .auth-btn {
+            width: 100%;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .auth-btn:hover {
+            background: #2563eb;
+        }
+        
+        /* Utilities */
+        .hidden {
+            display: none;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #64748b;
+            padding: 40px;
+        }
+        
+        .error {
+            background: #fef2f2;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+        
+        .success {
+            background: #dcfce7;
+            color: #166534;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+        
+        /* Page Specific Styles */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* Holdings Table */
+        .holdings-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .holdings-table th,
+        .holdings-table td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .holdings-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        .holdings-table tr:hover {
+            background: #f8fafc;
+        }
+        
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: white;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            min-width: 200px;
+        }
+        
+        /* History Page Styles */
+        .performance-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .performance-metric {
+            text-align: center;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        
+        .time-range-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .range-btn {
+            background: #f1f5f9;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+        
+        .range-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .range-btn:hover {
+            background: #e2e8f0;
+        }
+        
+        .range-btn.active:hover {
+            background: #2563eb;
+        }
+
+        /* Rebalance Page Styles */
+        .allocation-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .allocation-row:last-child {
+            border-bottom: none;
+        }
+        
+        .allocation-name {
+            font-weight: 500;
+            color: #334155;
+        }
+        
+        .allocation-bars {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            margin: 0 16px;
+            max-width: 200px;
+        }
+        
+        .allocation-bar {
+            height: 8px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            position: relative;
+            flex: 1;
+        }
+        
+        .allocation-current {
+            height: 100%;
+            background: #3b82f6;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        .allocation-target {
+            height: 100%;
+            background: #22c55e;
+            border-radius: 4px;
+            opacity: 0.7;
+            transition: width 0.3s ease;
+        }
+        
+        .allocation-values {
+            text-align: right;
+            font-size: 14px;
+            min-width: 100px;
+        }
+        
+        .current-weight {
+            color: #3b82f6;
+            font-weight: 500;
+        }
+        
+        .target-weight {
+            color: #22c55e;
+            font-size: 12px;
+        }
+        
+        .drift-indicator {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+        
+        .drift-ok {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .drift-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .drift-critical {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .trade-suggestion {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 4px solid transparent;
+        }
+        
+        .trade-buy {
+            border-left-color: #22c55e;
+        }
+        
+        .trade-sell {
+            border-left-color: #ef4444;
+        }
+        
+        .trade-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .trade-action {
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .action-buy {
+            background: #dcfce7;
+            color: #166534;
+        }
+        
+        .action-sell {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .trade-asset {
+            font-weight: 500;
+            color: #334155;
+        }
+        
+        .trade-amount {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .no-suggestions {
+            text-align: center;
+            color: #64748b;
+            padding: 24px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 2px dashed #d1d5db;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            font-size: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 8px;
+            border-radius: 2px;
+        }
+        
+        .legend-current {
+            background: #3b82f6;
+        }
+        
+        .legend-target {
+            background: #22c55e;
+            opacity: 0.7;
+        }
+
+        /* Settings Page Styles */
+        .form-section {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .asset-target-row {
+            display: grid;
+            grid-template-columns: 1fr 80px 80px;
+            gap: 12px;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .asset-target-row:last-child {
+            border-bottom: none;
+        }
+        
+        .asset-name {
+            font-weight: 500;
+            color: #334155;
+        }
+        
+        .target-input {
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        
+        .target-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .policy-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .preset-btn {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        
+        .preset-btn:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .preset-name {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        
+        .preset-desc {
+            font-size: 12px;
+            color: #64748b;
+        }
+        
+        .total-allocation {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+            text-align: center;
+        }
+        
+        .total-allocation.valid {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        .total-allocation.invalid {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .total-text {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .total-valid {
+            color: #16a34a;
+        }
+        
+        .total-invalid {
+            color: #dc2626;
+        }
+        
+        .chart-container {
+            position: relative;
+            min-height: 300px;
+        }
+        
+        .chart-line {
+            fill: none;
+            stroke: #3b82f6;
+            stroke-width: 2;
+        }
+        
+        .chart-area {
+            fill: url(#chartGradient);
+            opacity: 0.3;
+        }
+        
+        .chart-dot {
+            fill: #3b82f6;
+            r: 3;
+        }
+        
+        .chart-tooltip {
+            position: absolute;
+            background: #1e293b;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .stats-list {
+            display: grid;
+            gap: 12px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            color: #64748b;
+        }
+        
+        .stat-value {
+            font-weight: 600;
+        }
+        
+        .stat-value.positive {
+            color: #059669;
+        }
+        
+        .stat-value.negative {
+            color: #dc2626;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .allocation-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .quick-actions {
+                grid-template-columns: 1fr;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+            
+            .search-input {
+                min-width: unset;
+            }
+            
+            .performance-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .time-range-buttons {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-card">
+            <h1 class="auth-title">📈 Portfolio Tracker</h1>
+            <input type="password" id="password" class="auth-input" placeholder="Enter password">
+            <button class="auth-btn" onclick="login()">Login</button>
+            <div id="auth-error"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app-container" class="app-container hidden">
+        <!-- Top App Bar -->
+        <div class="app-bar">
+            <div class="app-title">📈 Portfolio Tracker</div>
+            <div class="app-actions">
+                <button class="refresh-btn" onclick="refreshPrices()">
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                </button>
+                <button class="user-menu" onclick="logout()">🔒</button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <!-- Dashboard Page -->
+            <div id="dashboard-page" class="page active">
+                <!-- Total Value -->
+                <div class="card total-value-card">
+                    <div class="value-badge large" id="total-value">Loading...</div>
+                    <div style="margin: 8px 0;">
+                        <span class="delta-badge" id="total-delta">—</span>
+                        <span class="freshness-chip" id="total-freshness">—</span>
+                    </div>
+                </div>
+
+                <!-- Allocation -->
+                <div class="allocation-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Allocation</div>
+                        </div>
+                        <div class="donut-container">
+                            <div style="font-size: 14px; color: #64748b;">Tap to view breakdown</div>
+                            <div id="allocation-chart" style="margin-top: 16px;">
+                                <!-- Will be populated with asset breakdown -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Targets vs Actual</div>
+                        </div>
+                        <div class="targets-container">
+                            <div style="font-size: 14px; color: #64748b;">Policy comparison</div>
+                            <div id="targets-chart" style="margin-top: 16px;">
+                                <!-- Will show target vs actual bars -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts -->
+                <div id="alerts-section" class="hidden">
+                    <div class="card alerts-card">
+                        <div class="card-content">
+                            <div class="card-title">⚠️ Alerts</div>
+                            <div id="alerts-list">
+                                <!-- Dynamic alerts -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Quick Actions</div>
+                        <div class="quick-actions">
+                            <button class="action-btn" onclick="showPage('uploads')">📁 Upload Holdings</button>
+                            <button class="action-btn" onclick="showPage('uploads')">📊 Upload NAV</button>
+                            <button class="action-btn primary" onclick="refreshPrices()">🔄 Refresh Prices</button>
+                            <button class="action-btn" onclick="showPage('rebalance')">⚖️ Rebalance</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Holdings Page -->
+            <div id="holdings-page" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Holdings</div>
+                        <div class="filters">
+                            <select class="filter-select" id="sleeve-filter">
+                                <option value="">All Sleeves</option>
+                            </select>
+                            <select class="filter-select" id="account-filter">
+                                <option value="">All Accounts</option>
+                            </select>
+                            <select class="filter-select" id="freshness-filter">
+                                <option value="">All</option>
+                                <option value="ok">Fresh</option>
+                                <option value="stale">Stale</option>
+                            </select>
+                            <input type="text" class="search-input" id="search-input" placeholder="Search positions...">
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div id="holdings-table-container">
+                            <table class="holdings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Sleeve</th>
+                                        <th>Account</th>
+                                        <th>Qty</th>
+                                        <th>Price</th>
+                                        <th>Value</th>
+                                        <th>Weight</th>
+                                        <th>Fresh</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="holdings-tbody">
+                                    <!-- Will be populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rebalance Page -->
+            <div id="rebalance-page" class="page">
+                <!-- Policy Status -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Policy Status</div>
+                        <div id="policy-status" style="color: #64748b; margin-bottom: 16px;">Loading policy...</div>
+                    </div>
+                </div>
+
+                <!-- Current vs Target Allocation -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Current vs Target Allocation</div>
+                        <div id="allocation-comparison" style="margin-top: 16px;">
+                            Loading allocation data...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trade Suggestions -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Trade Suggestions</div>
+                        <div id="trade-suggestions" style="margin-top: 16px;">
+                            Loading suggestions...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Page -->
+            <div id="history-page" class="page">
+                <!-- Performance Summary -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Performance Summary</div>
+                        <div class="performance-grid">
+                            <div class="performance-metric">
+                                <div class="metric-label">Current Value</div>
+                                <div class="metric-value" id="history-current-value">€—</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="metric-label">Period Return</div>
+                                <div class="metric-value" id="history-period-return">—</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="metric-label">Best Day</div>
+                                <div class="metric-value" id="history-best-day">—</div>
+                            </div>
+                            <div class="performance-metric">
+                                <div class="metric-label">Worst Day</div>
+                                <div class="metric-value" id="history-worst-day">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Range & Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Portfolio Value</div>
+                        <div class="time-range-buttons">
+                            <button class="range-btn" onclick="setTimeRange('1M')">1M</button>
+                            <button class="range-btn" onclick="setTimeRange('3M')">3M</button>
+                            <button class="range-btn" onclick="setTimeRange('YTD')">YTD</button>
+                            <button class="range-btn active" onclick="setTimeRange('1Y')">1Y</button>
+                            <button class="range-btn" onclick="setTimeRange('ALL')">All</button>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="chart-container">
+                            <svg id="history-chart" viewBox="0 0 800 300" style="width: 100%; height: 300px;">
+                                <!-- Chart will be drawn here -->
+                            </svg>
+                            <div id="chart-loading" class="loading">Loading historical data...</div>
+                            <div id="chart-error" class="error hidden">Failed to load chart data</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Statistics</div>
+                        <div class="stats-list" id="history-stats">
+                            <!-- Will be populated with stats -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Uploads Page -->
+            <div id="uploads-page" class="page">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Upload Files</div>
+                    </div>
+                    <div class="card-content">
+                        <div style="margin-bottom: 24px;">
+                            <h3 style="margin-bottom: 8px;">Holdings (Replace Mode)</h3>
+                            <p style="color: #64748b; font-size: 14px; margin-bottom: 16px;">
+                                ⚠️ Replaces positions for accounts present in this file.
+                            </p>
+                            <label for="holdings-file" class="action-btn" style="display: inline-block; cursor: pointer;">
+                                📁 Choose Holdings File
+                                <input type="file" id="holdings-file" accept=".csv" style="display:none" onchange="uploadFile('holdings')">
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <h3 style="margin-bottom: 8px;">NAV Data</h3>
+                            <p style="color: #64748b; font-size: 14px; margin-bottom: 16px;">
+                                Updates net asset values for funds and bonds.
+                            </p>
+                            <label for="nav-file" class="action-btn" style="display: inline-block; cursor: pointer;">
+                                📊 Choose NAV File
+                                <input type="file" id="nav-file" accept=".csv" style="display:none" onchange="uploadFile('nav')">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings-page" class="page">
+                <!-- Current Policy Status -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Investment Policy</div>
+                        <div id="current-policy-status" style="margin-bottom: 16px;">
+                            Loading current policy...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Policy Configuration Form -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Configure Target Allocations</div>
+                        <p style="color: #64748b; margin-bottom: 20px;">Set your target asset allocation percentages and drift bands.</p>
+                        
+                        <form id="policy-form">
+                            <div class="form-section">
+                                <label class="form-label">Base Currency</label>
+                                <select id="base-currency" class="form-input">
+                                    <option value="EUR">EUR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="GBP">GBP</option>
+                                </select>
+                            </div>
+
+                            <div class="form-section">
+                                <div class="form-label" style="margin-bottom: 16px;">Asset Class Targets</div>
+                                <div id="asset-targets">
+                                    <!-- Asset class inputs will be dynamically generated -->
+                                </div>
+                            </div>
+
+                            <div class="policy-actions">
+                                <button type="button" class="btn btn-secondary" onclick="loadCurrentPolicy()">Reset to Current</button>
+                                <button type="button" class="btn btn-primary" onclick="savePolicy()">Save Policy</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-title">Quick Presets</div>
+                        <p style="color: #64748b; margin-bottom: 16px;">Apply common investment strategies.</p>
+                        
+                        <div class="preset-buttons">
+                            <button class="preset-btn" onclick="applyPreset('conservative')">
+                                <div class="preset-name">Conservative</div>
+                                <div class="preset-desc">70% Bonds, 25% Equity, 5% Cash</div>
+                            </button>
+                            <button class="preset-btn" onclick="applyPreset('balanced')">
+                                <div class="preset-name">Balanced</div>
+                                <div class="preset-desc">50% Equity, 40% Bonds, 10% Alternatives</div>
+                            </button>
+                            <button class="preset-btn" onclick="applyPreset('aggressive')">
+                                <div class="preset-name">Aggressive</div>
+                                <div class="preset-desc">80% Equity, 15% Alternatives, 5% Cash</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="showPage('dashboard')">
+                <div class="nav-icon">📊</div>
+                <div class="nav-label">Dashboard</div>
+            </div>
+            <div class="nav-item" onclick="showPage('holdings')">
+                <div class="nav-icon">📋</div>
+                <div class="nav-label">Holdings</div>
+            </div>
+            <div class="nav-item" onclick="showPage('rebalance')">
+                <div class="nav-icon">⚖️</div>
+                <div class="nav-label">Rebalance</div>
+            </div>
+            <div class="nav-item" onclick="showPage('history')">
+                <div class="nav-icon">📈</div>
+                <div class="nav-label">History</div>
+            </div>
+            <div class="nav-item" onclick="showPage('uploads')">
+                <div class="nav-icon">📁</div>
+                <div class="nav-label">Uploads</div>
+            </div>
+            <div class="nav-item" onclick="showPage('settings')">
+                <div class="nav-icon">⚙️</div>
+                <div class="nav-label">Settings</div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div id="messages" style="position: fixed; top: 70px; right: 16px; z-index: 1000;"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const PASSWORD = 'portfolio123';
+        
+        let portfolioData = null;
+        let holdingsData = null;
+        let historyData = null;
+        let currentTimeRange = '1Y';
+        
+        // Initialize
+        if (localStorage.getItem('portfolio-auth') === 'true') {
+            showApp();
+        }
+        
+        function login() {
+            const password = document.getElementById('password').value;
+            if (password === PASSWORD) {
+                localStorage.setItem('portfolio-auth', 'true');
+                showApp();
+            } else {
+                document.getElementById('auth-error').innerHTML = '<div class="error">Invalid password</div>';
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('portfolio-auth');
+            document.getElementById('auth-container').classList.remove('hidden');
+            document.getElementById('app-container').classList.add('hidden');
+            document.getElementById('password').value = '';
+        }
+        
+        function showApp() {
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            loadDashboard();
+        }
+        
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // Show selected page
+            document.getElementById(pageName + '-page').classList.add('active');
+            
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Load page-specific data
+            if (pageName === 'dashboard') {
+                loadDashboard();
+            } else if (pageName === 'holdings') {
+                loadHoldings();
+            } else if (pageName === 'history') {
+                loadHistory();
+            } else if (pageName === 'rebalance') {
+                loadRebalance();
+            } else if (pageName === 'settings') {
+                loadSettings();
+            }
+        }
+        
+        async function loadDashboard() {
+            try {
+                const response = await fetch(`${API_BASE}/portfolio/latest`);
+                portfolioData = await response.json();
+                
+                // Update total value
+                document.getElementById('total-value').textContent = `€${formatNumber(portfolioData.total_value)}`;
+                
+                // Update allocation breakdown
+                const allocationChart = document.getElementById('allocation-chart');
+                allocationChart.innerHTML = portfolioData.by_sleeve.map(sleeve => `
+                    <div class="asset-item" onclick="showSleeve('${sleeve.asset_class}')">
+                        <div class="asset-name">${sleeve.asset_class}</div>
+                        <div class="asset-details">
+                            <div class="asset-value">€${formatNumber(sleeve.value)}</div>
+                            <div class="asset-weight">${(sleeve.weight * 100).toFixed(1)}%</div>
+                            <div class="freshness-chip ${sleeve.freshness}">${sleeve.freshness.toUpperCase()}</div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Check for alerts
+                const staleAssets = portfolioData.by_sleeve.filter(s => s.freshness === 'stale');
+                if (staleAssets.length > 0) {
+                    document.getElementById('alerts-section').classList.remove('hidden');
+                    document.getElementById('alerts-list').innerHTML = `
+                        <div class="alert-item" onclick="showPage('holdings')">
+                            • Stale prices (${staleAssets.length} asset classes)
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                showMessage('Failed to load dashboard', 'error');
+            }
+        }
+        
+        async function loadHoldings() {
+            try {
+                const response = await fetch(`${API_BASE}/portfolio/positions`);
+                const positions = await response.json();
+                
+                const tbody = document.getElementById('holdings-tbody');
+                tbody.innerHTML = positions.map(pos => `
+                    <tr onclick="showPosition('${pos.code}')">
+                        <td>${pos.name}</td>
+                        <td>${pos.asset_class}</td>
+                        <td>${pos.account}</td>
+                        <td>${formatNumber(pos.quantity)}</td>
+                        <td>€${formatNumber(pos.price_eur)}</td>
+                        <td>€${formatNumber(pos.value_eur)}</td>
+                        <td>${(pos.weight * 100).toFixed(1)}%</td>
+                        <td><span class="freshness-chip ${pos.freshness}">${pos.freshness.toUpperCase()}</span></td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                document.getElementById('holdings-tbody').innerHTML = `
+                    <tr><td colspan="8" style="text-align: center; padding: 40px; color: #dc2626;">
+                        Failed to load holdings data
+                    </td></tr>
+                `;
+            }
+        }
+        
+        function showSleeve(assetClass) {
+            showMessage(`Sleeve view for ${assetClass} - coming soon!`, 'success');
+        }
+        
+        function showPosition(code) {
+            showMessage(`Position detail for ${code} - coming soon!`, 'success');
+        }
+        
+        async function refreshPrices() {
+            showMessage('Refreshing prices...', 'loading');
+            try {
+                const response = await fetch(`${API_BASE}/admin/refresh/prices`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    showMessage('Prices refreshed successfully!', 'success');
+                    setTimeout(loadDashboard, 2000);
+                } else {
+                    showMessage('Failed to refresh prices', 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to refresh prices', 'error');
+            }
+        }
+        
+        async function uploadFile(type) {
+            const fileInput = document.getElementById(`${type}-file`);
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            showMessage(`Uploading ${type} file...`, 'loading');
+            
+            try {
+                const response = await fetch(`${API_BASE}/upload/${type}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    showMessage(`${type.charAt(0).toUpperCase() + type.slice(1)} uploaded successfully!`, 'success');
+                    setTimeout(loadDashboard, 1000);
+                } else {
+                    const error = await response.text();
+                    showMessage(`Upload failed: ${error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Upload failed: ${error.message}`, 'error');
+            }
+            
+            fileInput.value = '';
+        }
+        
+        function formatNumber(num) {
+            return new Intl.NumberFormat('de-DE').format(Math.round(num));
+        }
+        
+        function showMessage(text, type) {
+            const messages = document.getElementById('messages');
+            const message = document.createElement('div');
+            message.className = type;
+            message.textContent = text;
+            message.style.marginBottom = '8px';
+            messages.appendChild(message);
+            
+            setTimeout(() => {
+                if (message.parentNode) {
+                    message.parentNode.removeChild(message);
+                }
+            }, 5000);
+        }
+        
+        // History Page Functions
+        async function loadHistory() {
+            try {
+                document.getElementById('chart-loading').classList.remove('hidden');
+                document.getElementById('chart-error').classList.add('hidden');
+                
+                const response = await fetch(`${API_BASE}/portfolio/history`);
+                historyData = await response.json();
+                
+                // Update current value
+                if (portfolioData) {
+                    document.getElementById('history-current-value').textContent = `€${formatNumber(portfolioData.total_value)}`;
+                }
+                
+                // Filter data and draw chart
+                filterAndDrawChart();
+                calculateStats();
+                
+                document.getElementById('chart-loading').classList.add('hidden');
+                
+            } catch (error) {
+                document.getElementById('chart-loading').classList.add('hidden');
+                document.getElementById('chart-error').classList.remove('hidden');
+                showMessage('Failed to load history data', 'error');
+            }
+        }
+        
+        function setTimeRange(range) {
+            currentTimeRange = range;
+            
+            // Update active button
+            document.querySelectorAll('.range-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Redraw chart with new range
+            if (historyData) {
+                filterAndDrawChart();
+                calculateStats();
+            }
+        }
+        
+        function filterAndDrawChart() {
+            if (!historyData || !historyData.points || historyData.points.length === 0) {
+                drawEmptyChart();
+                return;
+            }
+            
+            const now = new Date();
+            const cutoffDate = getCutoffDate(currentTimeRange, now);
+            
+            // Filter data points
+            const filteredPoints = historyData.points.filter(point => {
+                const pointDate = new Date(point.ts);
+                return pointDate >= cutoffDate;
+            });
+            
+            if (filteredPoints.length === 0) {
+                drawEmptyChart();
+                return;
+            }
+            
+            drawChart(filteredPoints);
+        }
+        
+        function getCutoffDate(range, now) {
+            const cutoff = new Date(now);
+            
+            switch (range) {
+                case '1M':
+                    cutoff.setMonth(cutoff.getMonth() - 1);
+                    break;
+                case '3M':
+                    cutoff.setMonth(cutoff.getMonth() - 3);
+                    break;
+                case 'YTD':
+                    cutoff.setMonth(0, 1); // January 1st
+                    break;
+                case '1Y':
+                    cutoff.setFullYear(cutoff.getFullYear() - 1);
+                    break;
+                case 'ALL':
+                    cutoff.setFullYear(2000); // Very old date
+                    break;
+            }
+            
+            return cutoff;
+        }
+        
+        function drawChart(points) {
+            const svg = document.getElementById('history-chart');
+            const width = 800;
+            const height = 300;
+            const padding = 50;
+            
+            // Clear existing content
+            svg.innerHTML = '';
+            
+            // Add gradient definition
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            gradient.setAttribute('id', 'chartGradient');
+            gradient.setAttribute('x1', '0%');
+            gradient.setAttribute('y1', '0%');
+            gradient.setAttribute('x2', '0%');
+            gradient.setAttribute('y2', '100%');
+            
+            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop1.setAttribute('offset', '0%');
+            stop1.setAttribute('style', 'stop-color:#3b82f6;stop-opacity:0.3');
+            
+            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            stop2.setAttribute('offset', '100%');
+            stop2.setAttribute('style', 'stop-color:#3b82f6;stop-opacity:0');
+            
+            gradient.appendChild(stop1);
+            gradient.appendChild(stop2);
+            defs.appendChild(gradient);
+            svg.appendChild(defs);
+            
+            // Calculate scales
+            const values = points.map(p => p.total_value_eur);
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+            const valueRange = maxValue - minValue;
+            
+            const times = points.map(p => new Date(p.ts).getTime());
+            const minTime = Math.min(...times);
+            const maxTime = Math.max(...times);
+            const timeRange = maxTime - minTime;
+            
+            // Create path for line
+            let pathData = '';
+            let areaData = '';
+            
+            points.forEach((point, index) => {
+                const x = padding + ((new Date(point.ts).getTime() - minTime) / timeRange) * (width - 2 * padding);
+                const y = height - padding - ((point.total_value_eur - minValue) / valueRange) * (height - 2 * padding);
+                
+                if (index === 0) {
+                    pathData = `M ${x} ${y}`;
+                    areaData = `M ${x} ${height - padding} L ${x} ${y}`;
+                } else {
+                    pathData += ` L ${x} ${y}`;
+                    areaData += ` L ${x} ${y}`;
+                }
+            });
+            
+            // Close area path
+            const lastPoint = points[points.length - 1];
+            const lastX = padding + ((new Date(lastPoint.ts).getTime() - minTime) / timeRange) * (width - 2 * padding);
+            areaData += ` L ${lastX} ${height - padding} Z`;
+            
+            // Draw area
+            const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            area.setAttribute('d', areaData);
+            area.setAttribute('class', 'chart-area');
+            svg.appendChild(area);
+            
+            // Draw line
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            line.setAttribute('d', pathData);
+            line.setAttribute('class', 'chart-line');
+            svg.appendChild(line);
+            
+            // Add dots for data points
+            points.forEach(point => {
+                const x = padding + ((new Date(point.ts).getTime() - minTime) / timeRange) * (width - 2 * padding);
+                const y = height - padding - ((point.total_value_eur - minValue) / valueRange) * (height - 2 * padding);
+                
+                const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                dot.setAttribute('cx', x);
+                dot.setAttribute('cy', y);
+                dot.setAttribute('class', 'chart-dot');
+                dot.setAttribute('data-value', point.total_value_eur);
+                dot.setAttribute('data-date', point.ts);
+                svg.appendChild(dot);
+            });
+        }
+        
+        function drawEmptyChart() {
+            const svg = document.getElementById('history-chart');
+            svg.innerHTML = `
+                <text x="400" y="150" text-anchor="middle" fill="#64748b" font-size="16">
+                    No data available for selected period
+                </text>
+            `;
+        }
+        
+        function calculateStats() {
+            if (!historyData || !historyData.points || historyData.points.length < 2) {
+                // Show placeholder stats
+                document.getElementById('history-period-return').textContent = '—';
+                document.getElementById('history-best-day').textContent = '—';
+                document.getElementById('history-worst-day').textContent = '—';
+                document.getElementById('history-stats').innerHTML = '<div class="stat-item"><span class="stat-label">Insufficient data</span><span class="stat-value">—</span></div>';
+                return;
+            }
+            
+            const now = new Date();
+            const cutoffDate = getCutoffDate(currentTimeRange, now);
+            
+            const filteredPoints = historyData.points.filter(point => {
+                const pointDate = new Date(point.ts);
+                return pointDate >= cutoffDate;
+            });
+            
+            if (filteredPoints.length < 2) {
+                document.getElementById('history-period-return').textContent = '—';
+                document.getElementById('history-best-day').textContent = '—';
+                document.getElementById('history-worst-day').textContent = '—';
+                return;
+            }
+            
+            // Calculate period return
+            const startValue = filteredPoints[0].total_value_eur;
+            const endValue = filteredPoints[filteredPoints.length - 1].total_value_eur;
+            const periodReturn = ((endValue - startValue) / startValue) * 100;
+            
+            // Calculate daily changes
+            let bestDay = { change: 0, date: '', value: 0 };
+            let worstDay = { change: 0, date: '', value: 0 };
+            let maxDrawdown = 0;
+            let peak = filteredPoints[0].total_value_eur;
+            
+            for (let i = 1; i < filteredPoints.length; i++) {
+                const prevValue = filteredPoints[i - 1].total_value_eur;
+                const currentValue = filteredPoints[i].total_value_eur;
+                const dailyChange = ((currentValue - prevValue) / prevValue) * 100;
+                
+                // Track best/worst days
+                if (dailyChange > bestDay.change) {
+                    bestDay = {
+                        change: dailyChange,
+                        date: new Date(filteredPoints[i].ts).toLocaleDateString(),
+                        value: currentValue
+                    };
+                }
+                
+                if (dailyChange < worstDay.change) {
+                    worstDay = {
+                        change: dailyChange,
+                        date: new Date(filteredPoints[i].ts).toLocaleDateString(),
+                        value: currentValue
+                    };
+                }
+                
+                // Track max drawdown
+                if (currentValue > peak) {
+                    peak = currentValue;
+                } else {
+                    const drawdown = ((peak - currentValue) / peak) * 100;
+                    if (drawdown > maxDrawdown) {
+                        maxDrawdown = drawdown;
+                    }
+                }
+            }
+            
+            // Update UI
+            const periodReturnEl = document.getElementById('history-period-return');
+            periodReturnEl.textContent = `${periodReturn >= 0 ? '+' : ''}${periodReturn.toFixed(1)}%`;
+            periodReturnEl.className = `metric-value ${periodReturn >= 0 ? 'positive' : 'negative'}`;
+            
+            const bestDayEl = document.getElementById('history-best-day');
+            bestDayEl.textContent = `+${bestDay.change.toFixed(1)}%`;
+            bestDayEl.className = 'metric-value positive';
+            
+            const worstDayEl = document.getElementById('history-worst-day');
+            worstDayEl.textContent = `${worstDay.change.toFixed(1)}%`;
+            worstDayEl.className = 'metric-value negative';
+            
+            // Update detailed stats
+            document.getElementById('history-stats').innerHTML = `
+                <div class="stat-item">
+                    <span class="stat-label">Max Drawdown</span>
+                    <span class="stat-value negative">-${maxDrawdown.toFixed(1)}%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Data Points</span>
+                    <span class="stat-value">${filteredPoints.length}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Period Start</span>
+                    <span class="stat-value">€${formatNumber(startValue)}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Period End</span>
+                    <span class="stat-value">€${formatNumber(endValue)}</span>
+                </div>
+            `;
+        }
+
+        async function loadRebalance() {
+            try {
+                // Check if policy exists by calling portfolio/latest first
+                const portfolioResponse = await fetch(`${API_BASE}/portfolio/latest`);
+                const portfolioData = await portfolioResponse.json();
+                
+                // Try to get rebalance suggestions
+                const rebalanceResponse = await fetch(`${API_BASE}/rebalance`);
+                
+                if (rebalanceResponse.status === 400) {
+                    // No policy set
+                    document.getElementById('policy-status').innerHTML = 
+                        '<span style="color: #ef4444;">⚠️ No investment policy configured. Please set target allocations in Settings.</span>';
+                    document.getElementById('allocation-comparison').innerHTML = 
+                        '<p style="color: #64748b; text-align: center; padding: 24px;">Set up your investment policy first to see allocation comparison.</p>';
+                    document.getElementById('trade-suggestions').innerHTML = 
+                        '<p style="color: #64748b; text-align: center; padding: 24px;">Configure target allocations to receive trade suggestions.</p>';
+                    return;
+                }
+                
+                if (!rebalanceResponse.ok) {
+                    throw new Error(`HTTP error! status: ${rebalanceResponse.status}`);
+                }
+                
+                const rebalanceData = await rebalanceResponse.json();
+                
+                // Update policy status
+                document.getElementById('policy-status').innerHTML = 
+                    '<span style="color: #22c55e;">✅ Investment policy is active</span>';
+                
+                // Render allocation comparison
+                renderAllocationComparison(portfolioData, rebalanceData);
+                
+                // Render trade suggestions
+                renderTradeSuggestions(rebalanceData);
+                
+            } catch (error) {
+                console.error('Error loading rebalance data:', error);
+                document.getElementById('policy-status').innerHTML = 
+                    '<span style="color: #ef4444;">❌ Error loading policy data</span>';
+                document.getElementById('allocation-comparison').innerHTML = 
+                    '<p style="color: #ef4444; text-align: center; padding: 24px;">Failed to load allocation data</p>';
+                document.getElementById('trade-suggestions').innerHTML = 
+                    '<p style="color: #ef4444; text-align: center; padding: 24px;">Failed to load trade suggestions</p>';
+            }
+        }
+
+        function renderAllocationComparison(portfolioData, rebalanceData) {
+            const container = document.getElementById('allocation-comparison');
+            
+            // Create legend
+            let html = `
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color legend-current"></div>
+                        <span>Current</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color legend-target"></div>
+                        <span>Target</span>
+                    </div>
+                </div>
+            `;
+            
+            // Group current allocations by asset class
+            const currentAllocations = {};
+            portfolioData.by_sleeve.forEach(sleeve => {
+                currentAllocations[sleeve.asset_class] = sleeve.weight;
+            });
+            
+            // Create combined view of all asset classes from hard drift + current allocations
+            const allAssetClasses = new Set([
+                ...Object.keys(currentAllocations),
+                ...rebalanceData.hard_drift
+            ]);
+            
+            allAssetClasses.forEach(assetClass => {
+                const currentWeight = currentAllocations[assetClass] || 0;
+                const isHardDrift = rebalanceData.hard_drift.includes(assetClass);
+                
+                // Calculate estimated target based on suggestions
+                let targetWeight = currentWeight;
+                const suggestion = rebalanceData.suggestions.find(s => s.asset_class === assetClass);
+                if (suggestion) {
+                    // Rough estimation: if we need to buy/sell, assume we're moving toward a target
+                    const portfolioValue = portfolioData.total_value;
+                    const currentValue = currentWeight * portfolioValue;
+                    const adjustedValue = suggestion.action === 'BUY' ? 
+                        currentValue + suggestion.amount : 
+                        currentValue - suggestion.amount;
+                    targetWeight = adjustedValue / portfolioValue;
+                }
+                
+                const driftClass = isHardDrift ? 'drift-critical' : 'drift-ok';
+                const driftText = isHardDrift ? 'Out of band' : 'Within target';
+                
+                html += `
+                    <div class="allocation-row">
+                        <div class="allocation-name">${assetClass}</div>
+                        <div class="allocation-bars">
+                            <div class="allocation-bar">
+                                <div class="allocation-current" style="width: ${Math.min(currentWeight * 100, 100)}%"></div>
+                            </div>
+                            <div class="allocation-bar">
+                                <div class="allocation-target" style="width: ${Math.min(targetWeight * 100, 100)}%"></div>
+                            </div>
+                        </div>
+                        <div class="allocation-values">
+                            <div class="current-weight">${(currentWeight * 100).toFixed(1)}%</div>
+                            <div class="target-weight">Target: ${(targetWeight * 100).toFixed(1)}%</div>
+                            <div class="drift-indicator ${driftClass}">${driftText}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function renderTradeSuggestions(rebalanceData) {
+            const container = document.getElementById('trade-suggestions');
+            
+            if (rebalanceData.suggestions.length === 0) {
+                container.innerHTML = `
+                    <div class="no-suggestions">
+                        🎯 Your portfolio is well balanced!<br>
+                        <small>No trades needed at this time.</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            rebalanceData.suggestions.forEach(suggestion => {
+                const actionClass = suggestion.action === 'BUY' ? 'action-buy' : 'action-sell';
+                const tradeClass = suggestion.action === 'BUY' ? 'trade-buy' : 'trade-sell';
+                
+                html += `
+                    <div class="trade-suggestion ${tradeClass}">
+                        <div class="trade-info">
+                            <span class="trade-action ${actionClass}">${suggestion.action}</span>
+                            <span class="trade-asset">${suggestion.asset_class}</span>
+                        </div>
+                        <div class="trade-amount">€${formatNumber(suggestion.amount)}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        async function loadSettings() {
+            try {
+                // Load current portfolio to get asset classes
+                const portfolioResponse = await fetch(`${API_BASE}/portfolio/latest`);
+                const portfolioData = await portfolioResponse.json();
+                
+                // Try to load current policy
+                let currentPolicy = null;
+                try {
+                    const rebalanceResponse = await fetch(`${API_BASE}/rebalance`);
+                    if (rebalanceResponse.ok) {
+                        currentPolicy = await rebalanceResponse.json();
+                    }
+                } catch (e) {
+                    // Policy may not exist yet
+                }
+                
+                renderPolicyStatus(currentPolicy);
+                renderAssetTargetInputs(portfolioData.by_sleeve, currentPolicy);
+                
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                document.getElementById('current-policy-status').innerHTML = 
+                    '<span style="color: #ef4444;">❌ Error loading settings data</span>';
+            }
+        }
+
+        function renderPolicyStatus(rebalanceData) {
+            const container = document.getElementById('current-policy-status');
+            
+            if (!rebalanceData) {
+                container.innerHTML = `
+                    <div style="color: #f59e0b; padding: 12px; background: #fffbeb; border-radius: 6px; border-left: 4px solid #f59e0b;">
+                        ⚠️ No investment policy is currently set. Configure your target allocations below.
+                    </div>
+                `;
+                return;
+            }
+            
+            let statusHtml = `
+                <div style="color: #059669; padding: 12px; background: #ecfdf5; border-radius: 6px; border-left: 4px solid #059669; margin-bottom: 16px;">
+                    ✅ Investment policy is active with ${rebalanceData.suggestions.length} trade suggestions
+                </div>
+            `;
+            
+            // Show current policy summary
+            if (rebalanceData.suggestions.length > 0) {
+                statusHtml += `
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 16px;">
+                        <div style="font-weight: 600; color: #334155; margin-bottom: 12px;">Current Policy Status:</div>
+                        <div style="font-size: 14px; color: #64748b;">
+                            <strong>Asset classes out of target bands:</strong> ${rebalanceData.hard_drift.join(', ')}<br>
+                            <strong>Suggested actions:</strong>
+                        </div>
+                        <div style="margin-top: 8px;">
+                `;
+                
+                rebalanceData.suggestions.forEach(suggestion => {
+                    const actionColor = suggestion.action === 'BUY' ? '#059669' : '#dc2626';
+                    statusHtml += `
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                            <span style="color: ${actionColor}; font-weight: 500;">${suggestion.action} ${suggestion.asset_class}</span>
+                            <span style="font-weight: 600;">€${formatNumber(suggestion.amount)}</span>
+                        </div>
+                    `;
+                });
+                
+                statusHtml += `
+                        </div>
+                    </div>
+                `;
+            } else {
+                statusHtml += `
+                    <div style="background: #f0fdf4; border-radius: 8px; padding: 16px; border: 2px solid #22c55e;">
+                        <div style="color: #15803d; font-weight: 600;">🎯 Portfolio is perfectly balanced!</div>
+                        <div style="color: #16a34a; font-size: 14px; margin-top: 4px;">All asset classes are within their target bands.</div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = statusHtml;
+        }
+
+        function renderAssetTargetInputs(sleeves, rebalanceData) {
+            const container = document.getElementById('asset-targets');
+            
+            // Get all unique asset classes
+            const assetClasses = [...new Set(sleeves.map(s => s.asset_class))].sort();
+            
+            let html = '';
+            
+            // Header row
+            html += `
+                <div class="asset-target-row" style="font-weight: 600; color: #64748b; font-size: 12px; text-transform: uppercase;">
+                    <div>Asset Class</div>
+                    <div style="text-align: center;">Target %</div>
+                    <div style="text-align: center;">Band %</div>
+                </div>
+            `;
+            
+            // Input rows for each asset class
+            assetClasses.forEach(assetClass => {
+                const currentWeight = sleeves.find(s => s.asset_class === assetClass)?.weight || 0;
+                
+                html += `
+                    <div class="asset-target-row">
+                        <div class="asset-name">${assetClass}</div>
+                        <input type="number" 
+                               class="target-input" 
+                               id="target-${assetClass}" 
+                               placeholder="${(currentWeight * 100).toFixed(0)}"
+                               min="0" 
+                               max="100" 
+                               step="1"
+                               onchange="updateTotalAllocation()">
+                        <input type="number" 
+                               class="target-input" 
+                               id="band-${assetClass}" 
+                               placeholder="5"
+                               min="0" 
+                               max="20" 
+                               step="0.5"
+                               value="5">
+                    </div>
+                `;
+            });
+            
+            // Total allocation indicator
+            html += `
+                <div class="total-allocation" id="total-allocation">
+                    <div class="total-text">Total Allocation: <span id="total-percentage">0%</span></div>
+                    <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Must equal 100%</div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            updateTotalAllocation();
+        }
+
+        function updateTotalAllocation() {
+            const inputs = document.querySelectorAll('[id^="target-"]');
+            let total = 0;
+            
+            inputs.forEach(input => {
+                const value = parseFloat(input.value) || 0;
+                total += value;
+            });
+            
+            const totalElement = document.getElementById('total-percentage');
+            const containerElement = document.getElementById('total-allocation');
+            
+            totalElement.textContent = `${total.toFixed(1)}%`;
+            
+            // Update styling based on validity
+            containerElement.className = 'total-allocation';
+            totalElement.className = 'total-text';
+            
+            if (Math.abs(total - 100) < 0.1) {
+                containerElement.classList.add('valid');
+                totalElement.classList.add('total-valid');
+            } else {
+                containerElement.classList.add('invalid');
+                totalElement.classList.add('total-invalid');
+            }
+        }
+
+        async function savePolicy() {
+            try {
+                // Validate total allocation
+                const inputs = document.querySelectorAll('[id^="target-"]');
+                let total = 0;
+                const targets = [];
+                
+                inputs.forEach(input => {
+                    const assetClass = input.id.replace('target-', '');
+                    const weight = parseFloat(input.value) || 0;
+                    const band = parseFloat(document.getElementById(`band-${assetClass}`).value) || 5;
+                    
+                    total += weight;
+                    
+                    if (weight > 0) {
+                        targets.push({
+                            asset_class: assetClass,
+                            weight: weight / 100, // Convert to decimal
+                            band: band / 100       // Convert to decimal
+                        });
+                    }
+                });
+                
+                if (Math.abs(total - 100) > 0.1) {
+                    alert('Total allocation must equal 100%. Current total: ' + total.toFixed(1) + '%');
+                    return;
+                }
+                
+                if (targets.length === 0) {
+                    alert('Please set at least one target allocation.');
+                    return;
+                }
+                
+                const policy = {
+                    base_currency: document.getElementById('base-currency').value,
+                    targets: targets
+                };
+                
+                const response = await fetch(`${API_BASE}/policy`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(policy)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                console.log('Policy saved:', result);
+                
+                // Show success message
+                alert('Investment policy saved successfully!');
+                
+                // Reload settings to show updated status
+                loadSettings();
+                
+            } catch (error) {
+                console.error('Error saving policy:', error);
+                alert('Failed to save policy. Please try again.');
+            }
+        }
+
+        async function loadCurrentPolicy() {
+            try {
+                // Try to fetch policy directly, but if that fails, calculate from current allocation
+                let policyTargets = null;
+                
+                try {
+                    const policyResponse = await fetch(`${API_BASE}/policy`);
+                    if (policyResponse.ok) {
+                        const policy = await policyResponse.json();
+                        policyTargets = {};
+                        policy.targets.forEach(target => {
+                            policyTargets[target.asset_class] = {
+                                weight: target.weight * 100,
+                                band: target.band * 100
+                            };
+                        });
+                        document.getElementById('base-currency').value = policy.base_currency;
+                    }
+                } catch (e) {
+                    console.log('Direct policy fetch failed, using current allocations');
+                }
+                
+                // If no policy endpoint available, use current portfolio allocations as defaults
+                if (!policyTargets) {
+                    const portfolioResponse = await fetch(`${API_BASE}/portfolio/latest`);
+                    const portfolioData = await portfolioResponse.json();
+                    
+                    policyTargets = {};
+                    portfolioData.by_sleeve.forEach(sleeve => {
+                        policyTargets[sleeve.asset_class] = {
+                            weight: Math.round(sleeve.weight * 100),
+                            band: 5
+                        };
+                    });
+                }
+                
+                // Populate form inputs
+                Object.keys(policyTargets).forEach(assetClass => {
+                    const targetInput = document.getElementById(`target-${assetClass}`);
+                    const bandInput = document.getElementById(`band-${assetClass}`);
+                    
+                    if (targetInput) {
+                        targetInput.value = policyTargets[assetClass].weight;
+                    }
+                    if (bandInput) {
+                        bandInput.value = policyTargets[assetClass].band;
+                    }
+                });
+                
+                updateTotalAllocation();
+                
+            } catch (error) {
+                console.error('Error loading current policy:', error);
+                alert('Failed to load current policy.');
+            }
+        }
+
+        function applyPreset(presetName) {
+            const presets = {
+                conservative: {
+                    'Equity': 25,
+                    'Bonds': 70,
+                    'Cash': 5,
+                    'Crypto': 0,
+                    'Commodity': 0,
+                    'Lending': 0
+                },
+                balanced: {
+                    'Equity': 50,
+                    'Bonds': 40,
+                    'Crypto': 5,
+                    'Commodity': 3,
+                    'Cash': 2,
+                    'Lending': 0
+                },
+                aggressive: {
+                    'Equity': 70,
+                    'Crypto': 15,
+                    'Commodity': 5,
+                    'Bonds': 5,
+                    'Cash': 5,
+                    'Lending': 0
+                }
+            };
+            
+            const preset = presets[presetName];
+            if (!preset) return;
+            
+            // Apply preset values to inputs
+            Object.keys(preset).forEach(assetClass => {
+                const input = document.getElementById(`target-${assetClass}`);
+                if (input) {
+                    input.value = preset[assetClass];
+                }
+            });
+            
+            updateTotalAllocation();
+        }
+        
+        // Auto-refresh dashboard every 30 seconds
+        setInterval(() => {
+            if (document.getElementById('dashboard-page').classList.contains('active')) {
+                loadDashboard();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

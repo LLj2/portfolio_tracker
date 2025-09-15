@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  portfolio:
+    # Prefer a versioned image for repeatable deploys/rollbacks
+    image: ghcr.io/your-org/portfolio-tracker:1.0.0  # <-- change to your registry/tag
+    env_file: .env
+
+    # Private bind: reachable only via Tailscale (no public ports)
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    # Persist app data only (logs -> stdout with structured JSON)
+    volumes:
+      - ./data:/var/lib/portfolio:rw
+
+    # Health monitoring for auto-restart & ops checks
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 5
+
+    # Keep logs bounded
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    # Lightweight container hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+    # Container runs as non-root user (defined in Dockerfile)
+    # If needed, you can override with: user: "1000:1000"
+
+    restart: unless-stopped
+
+  # --- OPTIONAL: Local Postgres (uncomment if you want DB in the same host) ---
+  # db:
+  #   image: postgres:16
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_DB: ${POSTGRES_DB}
+  #     TZ: ${TZ}
+  #   volumes:
+  #     - ./pgdata:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 10
+  #   restart: unless-stopped

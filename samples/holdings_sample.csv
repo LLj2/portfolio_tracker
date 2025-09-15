@@ -1,0 +1,6 @@
+account,name,isin_or_symbol,asset_class,currency,quantity,book_cost
+Fineco-TRD,Vanguard FTSE All-World UCITS ETF,IE00B3RBWM25,Equity,USD,120,
+Generali-Policy-1,Generali Core Smart Target VII,GEN-CST-VII,Fund,EUR,1,
+Wallet,Physical Gold ETC,Xetra-GOLD-ETC,Commodity,EUR,20,23000
+Self-Custody,Bitcoin,CRYPTO:BTC,Crypto,EUR,0.85,
+Lending-Notes,Retail Loan Book (rolling),LEND:RETAIL-1,Lending,EUR,1,
