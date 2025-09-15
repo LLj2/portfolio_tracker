@@ -17,7 +17,7 @@ jobs:
       - name: Set image
         id: meta
         run: |
-          OWNER="${GITHUB_REPOSITORY%/*}"
+          OWNER=$(echo "${GITHUB_REPOSITORY%/*}" | tr '[:upper:]' '[:lower:]')
           IMAGE="ghcr.io/${OWNER}/portfolio-tracker"
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             TAG="$GITHUB_REF_NAME"
