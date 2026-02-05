@@ -949,6 +949,145 @@
                 justify-content: center;
             }
         }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #64748b;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #1e293b;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+        }
+
+        .modal-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .summary-stat {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .summary-stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .summary-stat-label {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .modal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .modal-table th {
+            text-align: left;
+            padding: 10px 12px;
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .modal-table td {
+            padding: 12px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .modal-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .position-name {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .position-account {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        @media (max-width: 640px) {
+            .modal-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-table {
+                font-size: 12px;
+            }
+
+            .modal-table th,
+            .modal-table td {
+                padding: 8px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1308,6 +1447,31 @@
 
         <!-- Messages -->
         <div id="messages" style="position: fixed; top: 70px; right: 16px; z-index: 1000;"></div>
+
+        <!-- Sleeve Modal -->
+        <div id="sleeve-modal" class="modal-overlay" onclick="closeSleeveModal(event)">
+            <div class="modal" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h2 class="modal-title" id="sleeve-modal-title">Sleeve</h2>
+                    <button class="modal-close" onclick="closeSleeveModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-summary" id="sleeve-summary"></div>
+                    <table class="modal-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Value</th>
+                                <th>Weight</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sleeve-positions"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1441,9 +1605,79 @@
             }
         }
         
-        function showSleeve(assetClass) {
-            showMessage(`Sleeve view for ${assetClass} - coming soon!`, 'success');
+        async function showSleeve(assetClass) {
+            try {
+                const response = await fetch(`${API_BASE}/portfolio/positions`);
+                const positions = await response.json();
+
+                // Filter positions by asset class
+                const filtered = positions.filter(p => p.asset_class === assetClass);
+
+                if (filtered.length === 0) {
+                    showMessage(`No positions found for ${assetClass}`, 'error');
+                    return;
+                }
+
+                // Calculate summary stats
+                const totalValue = filtered.reduce((sum, p) => sum + p.value_eur, 0);
+                const totalWeight = filtered.reduce((sum, p) => sum + p.weight, 0);
+                const positionCount = filtered.length;
+
+                // Update modal title
+                document.getElementById('sleeve-modal-title').textContent = `${assetClass} Positions`;
+
+                // Update summary
+                document.getElementById('sleeve-summary').innerHTML = `
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${positionCount}</div>
+                        <div class="summary-stat-label">Positions</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${formatNumber(totalValue)}</div>
+                        <div class="summary-stat-label">Total Value</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${(totalWeight * 100).toFixed(1)}%</div>
+                        <div class="summary-stat-label">Portfolio Weight</div>
+                    </div>
+                `;
+
+                // Update positions table
+                document.getElementById('sleeve-positions').innerHTML = filtered
+                    .sort((a, b) => b.value_eur - a.value_eur)
+                    .map(pos => `
+                        <tr>
+                            <td>
+                                <div class="position-name">${pos.name}</div>
+                                <div class="position-account">${pos.account} &bull; ${pos.code}</div>
+                            </td>
+                            <td>${formatNumber(pos.quantity)}</td>
+                            <td>${formatNumber(pos.price_eur)}</td>
+                            <td>${formatNumber(pos.value_eur)}</td>
+                            <td>${(pos.weight * 100).toFixed(2)}%</td>
+                        </tr>
+                    `).join('');
+
+                // Show modal
+                document.getElementById('sleeve-modal').classList.add('active');
+
+            } catch (error) {
+                showMessage(`Failed to load ${assetClass} positions`, 'error');
+            }
         }
+
+        function closeSleeveModal(event) {
+            if (!event || event.target === event.currentTarget) {
+                document.getElementById('sleeve-modal').classList.remove('active');
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeSleeveModal();
+            }
+        });
         
         function showPosition(code) {
             showMessage(`Position detail for ${code} - coming soon!`, 'success');
