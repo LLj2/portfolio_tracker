@@ -135,9 +135,6 @@ def _fetch_yahoo_finance_price(symbol: str, expected_currency: str = None) -> Op
     Fetch price from Yahoo Finance API with automatic European exchange detection.
     If base symbol fails or returns wrong currency, tries European exchange suffixes.
     """
-    # Skip if symbol already has an exchange suffix
-    has_suffix = any(symbol.endswith(suffix) for suffix in EUROPEAN_EXCHANGES)
-
     # Try the base symbol first
     result = _fetch_yahoo_finance_single(symbol)
     if result:
@@ -146,24 +143,22 @@ def _fetch_yahoo_finance_price(symbol: str, expected_currency: str = None) -> Op
         if expected_currency is None or currency == expected_currency:
             logger.info(f"Yahoo: {symbol} = {price} {currency}")
             return price
-        # If currency doesn't match and symbol doesn't have suffix, try European exchanges
-        if not has_suffix and expected_currency == 'EUR' and currency == 'USD':
-            logger.info(f"Yahoo: {symbol} returned {currency}, expected {expected_currency}. Trying European exchanges...")
+        logger.info(f"Yahoo: {symbol} returned {currency}, expected {expected_currency}. Trying European exchanges...")
 
     # If base symbol failed or returned wrong currency, try European exchanges
-    if not has_suffix:
-        # Extract base symbol (remove any existing suffix like .IR)
-        base_symbol = symbol.split('.')[0] if '.' in symbol else symbol
+    base_symbol = symbol.split('.')[0] if '.' in symbol else symbol
 
-        for suffix in EUROPEAN_EXCHANGES:
-            test_symbol = f"{base_symbol}{suffix}"
-            result = _fetch_yahoo_finance_single(test_symbol)
-            if result:
-                price, currency = result
-                # Prefer EUR for European exchanges
-                if currency == 'EUR' or (expected_currency and currency == expected_currency):
-                    logger.info(f"Yahoo: Found {test_symbol} = {price} {currency}")
-                    return price
+    for suffix in EUROPEAN_EXCHANGES:
+        test_symbol = f"{base_symbol}{suffix}"
+        if test_symbol == symbol:
+            continue  # already tried this exact symbol above
+        result = _fetch_yahoo_finance_single(test_symbol)
+        if result:
+            price, currency = result
+            # Prefer EUR for European exchanges
+            if currency == 'EUR' or (expected_currency and currency == expected_currency):
+                logger.info(f"Yahoo: Found {test_symbol} = {price} {currency}")
+                return price
 
     return None
 
