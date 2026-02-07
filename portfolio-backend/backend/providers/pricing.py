@@ -1,3 +1,4 @@
+import time
 from sqlalchemy.orm import Session
 from ..models import Instrument, Price, FxRate
 from . import crypto, fx_ecb, listed
@@ -71,7 +72,7 @@ def run_price_cycle(s: Session):
     # Fetch stock prices individually to pass currency info for European exchange detection
     if stock_instruments:
         print(f"Starting stock price fetch for {len(stock_instruments)} stocks...")
-        for inst in stock_instruments:
+        for i, inst in enumerate(stock_instruments):
             try:
                 print(f"Fetching {inst.code} (currency: {inst.currency})...")
                 px = listed.fetch_price(inst.code, inst.asset_class, inst.currency)
@@ -82,6 +83,9 @@ def run_price_cycle(s: Session):
                     print(f"No price returned for {inst.code}")
             except Exception as e:
                 print(f"Stock price fetch error for {inst.code}: {e}")
+            # Small delay between requests to avoid Yahoo rate limiting
+            if i < len(stock_instruments) - 1:
+                time.sleep(0.5)
     
     # Handle cash instruments (always price = 1.0)
     for inst in cash_instruments:

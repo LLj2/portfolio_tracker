@@ -136,14 +136,17 @@ def _fetch_yahoo_finance_price(symbol: str, expected_currency: str = None) -> Op
     If base symbol fails or returns wrong currency, tries European exchange suffixes.
     """
     # Try the base symbol first
+    logger.info(f"Yahoo: trying {symbol} (expected_currency={expected_currency})")
     result = _fetch_yahoo_finance_single(symbol)
     if result:
         price, currency = result
+        logger.info(f"Yahoo: {symbol} returned price={price} currency={currency}")
         # If we got a price and either no expected currency or it matches, return it
         if expected_currency is None or currency == expected_currency:
-            logger.info(f"Yahoo: {symbol} = {price} {currency}")
             return price
-        logger.info(f"Yahoo: {symbol} returned {currency}, expected {expected_currency}. Trying European exchanges...")
+        logger.info(f"Yahoo: currency mismatch for {symbol}, trying European exchanges...")
+    else:
+        logger.info(f"Yahoo: no result for {symbol}, trying European exchanges...")
 
     # If base symbol failed or returned wrong currency, try European exchanges
     base_symbol = symbol.split('.')[0] if '.' in symbol else symbol
@@ -155,11 +158,12 @@ def _fetch_yahoo_finance_price(symbol: str, expected_currency: str = None) -> Op
         result = _fetch_yahoo_finance_single(test_symbol)
         if result:
             price, currency = result
+            logger.info(f"Yahoo: {test_symbol} returned price={price} currency={currency}")
             # Prefer EUR for European exchanges
             if currency == 'EUR' or (expected_currency and currency == expected_currency):
-                logger.info(f"Yahoo: Found {test_symbol} = {price} {currency}")
                 return price
 
+    logger.warning(f"Yahoo: FAILED all attempts for {symbol} (base={base_symbol})")
     return None
 
 def fetch_price(code: str, asset_class: str, currency: str = None) -> Optional[float]:
