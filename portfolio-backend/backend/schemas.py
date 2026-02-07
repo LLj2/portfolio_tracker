@@ -40,11 +40,17 @@ class PositionDetail(BaseModel):
     weight: float
     freshness: str
     currency: str
+    cost_basis_eur: float = 0.0      # Total entry cost in EUR
+    unrealized_pnl: float = 0.0      # Current value - cost basis
+    pnl_percentage: float = 0.0      # ((current - cost) / cost) × 100
 
 class PortfolioOverview(BaseModel):
     total_value: float
     by_sleeve: List[SleeveWeight]
     drift: Dict[str, float]
+    total_cost_basis: float = 0.0
+    total_unrealized_pnl: float = 0.0
+    total_pnl_percentage: float = 0.0
 
 class HistoryPoint(BaseModel):
     ts: str

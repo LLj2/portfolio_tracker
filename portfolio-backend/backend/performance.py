@@ -107,10 +107,12 @@ def latest_overview(s: Session, base_ccy: str = "EUR") -> PortfolioOverview:
       - value & weight by sleeve
       - freshness: 'ok' if we used a live price, 'stale' if we used fallbacks
       - drift vs policy targets (if saved)
+      - P&L calculations (total cost basis, unrealized P&L, percentage)
     """
     sleeves_value = defaultdict(float)
     sleeves_fresh = defaultdict(lambda: "stale")
     total = 0.0
+    total_cost_basis = 0.0
 
     rows = (
         s.query(Position, Instrument)
@@ -136,6 +138,10 @@ def latest_overview(s: Session, base_ccy: str = "EUR") -> PortfolioOverview:
         sleeves_value[sleeve] += val
         total += val
 
+        # Accumulate cost basis
+        entry_total = getattr(pos, "entry_total", 0.0) or 0.0
+        total_cost_basis += entry_total
+
     by_sleeve = [
         SleeveWeight(
             asset_class=k,
@@ -158,7 +164,18 @@ def latest_overview(s: Session, base_ccy: str = "EUR") -> PortfolioOverview:
         target = targets.get(sw.asset_class, sw.weight)
         drift[sw.asset_class] = sw.weight - (target or 0.0)
 
-    return PortfolioOverview(total_value=float(total), by_sleeve=by_sleeve, drift=drift)
+    # Calculate P&L
+    total_unrealized_pnl = total - total_cost_basis
+    total_pnl_percentage = (total_unrealized_pnl / total_cost_basis * 100) if total_cost_basis > 0 else 0.0
+
+    return PortfolioOverview(
+        total_value=float(total),
+        by_sleeve=by_sleeve,
+        drift=drift,
+        total_cost_basis=float(total_cost_basis),
+        total_unrealized_pnl=float(total_unrealized_pnl),
+        total_pnl_percentage=float(total_pnl_percentage),
+    )
 
 
 def capture_eod_snapshots(s: Session) -> None:
@@ -214,6 +231,7 @@ def history(s: Session) -> PortfolioHistory:
 def get_positions(s: Session) -> list[PositionDetail]:
     """
     Return detailed position data for the Holdings table.
+    Includes P&L calculations for each position.
     """
     rows = (
         s.query(Position, Instrument, Account)
@@ -221,29 +239,34 @@ def get_positions(s: Session) -> list[PositionDetail]:
         .join(Account, Position.account_id == Account.id)
         .all()
     )
-    
+
     positions = []
     total_value = 0.0
-    
+
     # First pass: calculate total value for weights
     for pos, inst, acc in rows:
         px_eur = latest_px_eur(s, inst.id, inst.currency)
         val = (float(pos.quantity) * px_eur) if px_eur > 0 else _fallback_value(pos)
         total_value += val
-    
-    # Second pass: build position details with weights
+
+    # Second pass: build position details with weights and P&L
     for pos, inst, acc in rows:
         px_eur = latest_px_eur(s, inst.id, inst.currency)
         val = (float(pos.quantity) * px_eur) if px_eur > 0 else _fallback_value(pos)
-        
+
         # Determine freshness - assume fresh if we got a live price
         freshness = "ok" if px_eur > 0 else "stale"
-        
+
         # Handle special case for crypto currency display
         display_currency = inst.currency
         if inst.asset_class == "Crypto":
             display_currency = "EUR"  # Show EUR since crypto prices are in EUR
-            
+
+        # P&L calculations
+        cost_basis_eur = getattr(pos, "entry_total", 0.0) or 0.0
+        unrealized_pnl = val - cost_basis_eur
+        pnl_percentage = (unrealized_pnl / cost_basis_eur * 100) if cost_basis_eur > 0 else 0.0
+
         positions.append(PositionDetail(
             name=inst.name or inst.code,
             code=inst.code,
@@ -254,9 +277,12 @@ def get_positions(s: Session) -> list[PositionDetail]:
             value_eur=val,
             weight=val / total_value if total_value > 0 else 0.0,
             freshness=freshness,
-            currency=display_currency
+            currency=display_currency,
+            cost_basis_eur=float(cost_basis_eur),
+            unrealized_pnl=float(unrealized_pnl),
+            pnl_percentage=float(pnl_percentage),
         ))
-    
+
     # Sort by value descending
     positions.sort(key=lambda p: p.value_eur, reverse=True)
     return positions

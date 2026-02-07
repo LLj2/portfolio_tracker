@@ -1119,12 +1119,33 @@
         <div class="content">
             <!-- Dashboard Page -->
             <div id="dashboard-page" class="page active">
-                <!-- Total Value -->
+                <!-- Total Value & P&L Summary -->
                 <div class="card total-value-card">
                     <div class="value-badge large" id="total-value">Loading...</div>
                     <div style="margin: 8px 0;">
                         <span class="delta-badge" id="total-delta">—</span>
                         <span class="freshness-chip" id="total-freshness">—</span>
+                    </div>
+                </div>
+
+                <!-- P&L Summary Card -->
+                <div class="card" id="pnl-card">
+                    <div class="card-content">
+                        <div class="card-title">Profit & Loss</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 12px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">Cost Basis</div>
+                                <div style="font-size: 18px; font-weight: 600;" id="total-cost-basis">—</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">Unrealized P&L</div>
+                                <div style="font-size: 18px; font-weight: 600;" id="total-pnl">—</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 12px; color: #64748b; margin-bottom: 4px;">Return</div>
+                                <div style="font-size: 18px; font-weight: 600;" id="total-pnl-pct">—</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1212,6 +1233,8 @@
                                         <th>Qty</th>
                                         <th>Price</th>
                                         <th>Value</th>
+                                        <th>Cost</th>
+                                        <th>P&L</th>
                                         <th>Weight</th>
                                         <th>Fresh</th>
                                     </tr>
@@ -1464,6 +1487,8 @@
                                 <th>Quantity</th>
                                 <th>Price</th>
                                 <th>Value</th>
+                                <th>Cost</th>
+                                <th>P&L</th>
                                 <th>Weight</th>
                             </tr>
                         </thead>
@@ -1544,10 +1569,35 @@
             try {
                 const response = await fetch(`${API_BASE}/portfolio/latest`);
                 portfolioData = await response.json();
-                
+
                 // Update total value
                 document.getElementById('total-value').textContent = `€${formatNumber(portfolioData.total_value)}`;
-                
+
+                // Update P&L summary
+                const costBasis = portfolioData.total_cost_basis || 0;
+                const pnl = portfolioData.total_unrealized_pnl || 0;
+                const pnlPct = portfolioData.total_pnl_percentage || 0;
+
+                document.getElementById('total-cost-basis').textContent = `€${formatNumber(costBasis)}`;
+
+                const pnlEl = document.getElementById('total-pnl');
+                const pnlSign = pnl >= 0 ? '+' : '';
+                pnlEl.textContent = `${pnlSign}€${formatNumber(pnl)}`;
+                pnlEl.style.color = pnl >= 0 ? '#166534' : '#dc2626';
+
+                const pnlPctEl = document.getElementById('total-pnl-pct');
+                const pctSign = pnlPct >= 0 ? '+' : '';
+                pnlPctEl.textContent = `${pctSign}${pnlPct.toFixed(1)}%`;
+                pnlPctEl.style.color = pnlPct >= 0 ? '#166534' : '#dc2626';
+
+                // Hide P&L card if no cost basis data
+                const pnlCard = document.getElementById('pnl-card');
+                if (costBasis > 0) {
+                    pnlCard.classList.remove('hidden');
+                } else {
+                    pnlCard.classList.add('hidden');
+                }
+
                 // Update allocation breakdown
                 const allocationChart = document.getElementById('allocation-chart');
                 allocationChart.innerHTML = portfolioData.by_sleeve.map(sleeve => `
@@ -1560,7 +1610,7 @@
                         </div>
                     </div>
                 `).join('');
-                
+
                 // Check for alerts
                 const staleAssets = portfolioData.by_sleeve.filter(s => s.freshness === 'stale');
                 if (staleAssets.length > 0) {
@@ -1571,7 +1621,7 @@
                         </div>
                     `;
                 }
-                
+
             } catch (error) {
                 showMessage('Failed to load dashboard', 'error');
             }
@@ -1581,9 +1631,17 @@
             try {
                 const response = await fetch(`${API_BASE}/portfolio/positions`);
                 const positions = await response.json();
-                
+
                 const tbody = document.getElementById('holdings-tbody');
-                tbody.innerHTML = positions.map(pos => `
+                tbody.innerHTML = positions.map(pos => {
+                    const pnl = pos.unrealized_pnl || 0;
+                    const pnlPct = pos.pnl_percentage || 0;
+                    const pnlColor = pnl >= 0 ? '#166534' : '#dc2626';
+                    const pnlBg = pnl >= 0 ? '#dcfce7' : '#fef2f2';
+                    const pnlSign = pnl >= 0 ? '+' : '';
+                    const costBasis = pos.cost_basis_eur || 0;
+
+                    return `
                     <tr onclick="showPosition('${pos.code}')">
                         <td>${pos.name}</td>
                         <td>${pos.asset_class}</td>
@@ -1591,14 +1649,16 @@
                         <td>${formatNumber(pos.quantity)}</td>
                         <td>€${formatNumber(pos.price_eur)}</td>
                         <td>€${formatNumber(pos.value_eur)}</td>
+                        <td>${costBasis > 0 ? '€' + formatNumber(costBasis) : '—'}</td>
+                        <td>${costBasis > 0 ? `<span style="color: ${pnlColor}; background: ${pnlBg}; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${pnlSign}${pnlPct.toFixed(1)}%</span>` : '—'}</td>
                         <td>${(pos.weight * 100).toFixed(1)}%</td>
                         <td><span class="freshness-chip ${pos.freshness}">${pos.freshness.toUpperCase()}</span></td>
                     </tr>
-                `).join('');
-                
+                `}).join('');
+
             } catch (error) {
                 document.getElementById('holdings-tbody').innerHTML = `
-                    <tr><td colspan="8" style="text-align: center; padding: 40px; color: #dc2626;">
+                    <tr><td colspan="10" style="text-align: center; padding: 40px; color: #dc2626;">
                         Failed to load holdings data
                     </td></tr>
                 `;
@@ -1621,12 +1681,17 @@
                 // Calculate summary stats
                 const totalValue = filtered.reduce((sum, p) => sum + p.value_eur, 0);
                 const totalWeight = filtered.reduce((sum, p) => sum + p.weight, 0);
+                const totalCost = filtered.reduce((sum, p) => sum + (p.cost_basis_eur || 0), 0);
+                const totalPnl = filtered.reduce((sum, p) => sum + (p.unrealized_pnl || 0), 0);
+                const pnlPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
                 const positionCount = filtered.length;
 
                 // Update modal title
                 document.getElementById('sleeve-modal-title').textContent = `${assetClass} Positions`;
 
                 // Update summary
+                const pnlColor = totalPnl >= 0 ? '#166534' : '#dc2626';
+                const pnlSign = totalPnl >= 0 ? '+' : '';
                 document.getElementById('sleeve-summary').innerHTML = `
                     <div class="summary-stat">
                         <div class="summary-stat-value">${positionCount}</div>
@@ -1640,12 +1705,30 @@
                         <div class="summary-stat-value">${(totalWeight * 100).toFixed(1)}%</div>
                         <div class="summary-stat-label">Portfolio Weight</div>
                     </div>
+                    ${totalCost > 0 ? `
+                    <div class="summary-stat">
+                        <div class="summary-stat-value">${formatNumber(totalCost)}</div>
+                        <div class="summary-stat-label">Cost Basis</div>
+                    </div>
+                    <div class="summary-stat">
+                        <div class="summary-stat-value" style="color: ${pnlColor}">${pnlSign}${formatNumber(totalPnl)}</div>
+                        <div class="summary-stat-label">P&L (${pnlSign}${pnlPct.toFixed(1)}%)</div>
+                    </div>
+                    ` : ''}
                 `;
 
                 // Update positions table
                 document.getElementById('sleeve-positions').innerHTML = filtered
                     .sort((a, b) => b.value_eur - a.value_eur)
-                    .map(pos => `
+                    .map(pos => {
+                        const pnl = pos.unrealized_pnl || 0;
+                        const posPnlPct = pos.pnl_percentage || 0;
+                        const posPnlColor = pnl >= 0 ? '#166534' : '#dc2626';
+                        const posPnlBg = pnl >= 0 ? '#dcfce7' : '#fef2f2';
+                        const posPnlSign = pnl >= 0 ? '+' : '';
+                        const costBasis = pos.cost_basis_eur || 0;
+
+                        return `
                         <tr>
                             <td>
                                 <div class="position-name">${pos.name}</div>
@@ -1654,9 +1737,11 @@
                             <td>${formatNumber(pos.quantity)}</td>
                             <td>${formatNumber(pos.price_eur)}</td>
                             <td>${formatNumber(pos.value_eur)}</td>
+                            <td>${costBasis > 0 ? formatNumber(costBasis) : '—'}</td>
+                            <td>${costBasis > 0 ? `<span style="color: ${posPnlColor}; background: ${posPnlBg}; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${posPnlSign}${posPnlPct.toFixed(1)}%</span>` : '—'}</td>
                             <td>${(pos.weight * 100).toFixed(2)}%</td>
                         </tr>
-                    `).join('');
+                    `}).join('');
 
                 // Show modal
                 document.getElementById('sleeve-modal').classList.add('active');
