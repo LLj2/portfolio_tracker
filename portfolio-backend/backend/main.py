@@ -203,6 +203,19 @@ def refresh_prices():
         logger.error(f"Error refreshing prices: {e}")
         raise HTTPException(status_code=500, detail="Price refresh failed")
 
+# Manual snapshot capture
+@app.post("/admin/snapshot")
+def capture_snapshot():
+    try:
+        with db.SessionLocal() as s:
+            performance.capture_eod_snapshots(s)
+            s.commit()
+            logger.info("Manual snapshot captured")
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Error capturing snapshot: {e}")
+        raise HTTPException(status_code=500, detail="Snapshot capture failed")
+
 # Portfolio
 @app.get("/portfolio/latest", response_model=schemas.PortfolioOverview)
 def portfolio_latest():
