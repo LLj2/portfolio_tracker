@@ -1332,7 +1332,10 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">Holdings <span id="holdings-filter-count"></span></div>
+                        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>Holdings <span id="holdings-filter-count"></span></span>
+                            <button class="action-btn" onclick="exportHoldings()" style="font-size: 12px; padding: 6px 12px;">Export CSV</button>
+                        </div>
                         <div class="filters">
                             <select class="filter-select" id="sleeve-filter">
                                 <option value="">All Sleeves</option>
@@ -1967,7 +1970,11 @@
                 sibling = sibling.nextElementSibling;
             }
         }
-        
+
+        function exportHoldings() {
+            window.location.href = `${API_BASE}/portfolio/positions/export`;
+        }
+
         async function showSleeve(assetClass) {
             try {
                 const response = await fetch(`${API_BASE}/portfolio/positions`);

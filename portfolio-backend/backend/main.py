@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import text
 from typing import List
@@ -243,6 +243,44 @@ def portfolio_positions():
     except Exception as e:
         logger.error(f"Error getting portfolio positions: {e}")
         raise HTTPException(status_code=500, detail="Failed to get portfolio positions")
+
+@app.get("/portfolio/positions/export")
+def export_positions_csv():
+    """Export all positions as a CSV file with P&L data."""
+    import csv
+    import io
+    from datetime import datetime as dt
+
+    try:
+        with db.SessionLocal() as s:
+            positions = performance.get_positions(s)
+
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            "Name", "Code", "Asset Class", "Type", "Account", "Currency",
+            "Quantity", "Price (EUR)", "Value (EUR)", "Cost Basis (EUR)",
+            "Unrealized P&L (EUR)", "P&L %", "Weight %", "Freshness",
+        ])
+        for p in positions:
+            writer.writerow([
+                p.name, p.code, p.asset_class, p.instrument_type, p.account,
+                p.currency, p.quantity, round(p.price_eur, 2),
+                round(p.value_eur, 2), round(p.cost_basis_eur, 2),
+                round(p.unrealized_pnl, 2), round(p.pnl_percentage, 2),
+                round(p.weight * 100, 2), p.freshness,
+            ])
+
+        buf.seek(0)
+        filename = f"holdings_{dt.now().strftime('%Y%m%d_%H%M')}.csv"
+        return StreamingResponse(
+            iter([buf.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"Error exporting positions: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export positions")
 
 # Policy & Rebalance
 @app.get("/policy", response_model=schemas.PolicyIn)
