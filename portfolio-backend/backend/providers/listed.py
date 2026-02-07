@@ -102,8 +102,11 @@ def _fetch_iex_cloud_price(symbol: str) -> Optional[float]:
 
     return None
 
-def _fetch_yahoo_finance_price(symbol: str) -> Optional[float]:
-    """Fetch price from Yahoo Finance API (fallback)"""
+# European exchange suffixes to try when base symbol fails
+EUROPEAN_EXCHANGES = ['.MI', '.DE', '.AS', '.L', '.PA', '.SW']
+
+def _fetch_yahoo_finance_single(symbol: str) -> Optional[tuple[float, str]]:
+    """Fetch price from Yahoo Finance for a single symbol. Returns (price, currency) or None."""
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -119,20 +122,63 @@ def _fetch_yahoo_finance_price(symbol: str) -> Optional[float]:
         if result:
             meta = result[0].get('meta', {})
             price = meta.get('regularMarketPrice')
+            currency = meta.get('currency', 'USD')
             if price and price > 0:
-                return float(price)
+                return (float(price), currency)
     except (ValueError, KeyError) as e:
         logger.error(f"Error parsing Yahoo Finance response for {symbol}: {e}")
 
     return None
 
-def fetch_price(code: str, asset_class: str) -> Optional[float]:
+def _fetch_yahoo_finance_price(symbol: str, expected_currency: str = None) -> Optional[float]:
+    """
+    Fetch price from Yahoo Finance API with automatic European exchange detection.
+    If base symbol fails or returns wrong currency, tries European exchange suffixes.
+    """
+    # Skip if symbol already has an exchange suffix
+    has_suffix = any(symbol.endswith(suffix) for suffix in EUROPEAN_EXCHANGES)
+
+    # Try the base symbol first
+    result = _fetch_yahoo_finance_single(symbol)
+    if result:
+        price, currency = result
+        # If we got a price and either no expected currency or it matches, return it
+        if expected_currency is None or currency == expected_currency:
+            logger.info(f"Yahoo: {symbol} = {price} {currency}")
+            return price
+        # If currency doesn't match and symbol doesn't have suffix, try European exchanges
+        if not has_suffix and expected_currency == 'EUR' and currency == 'USD':
+            logger.info(f"Yahoo: {symbol} returned {currency}, expected {expected_currency}. Trying European exchanges...")
+
+    # If base symbol failed or returned wrong currency, try European exchanges
+    if not has_suffix:
+        # Extract base symbol (remove any existing suffix like .IR)
+        base_symbol = symbol.split('.')[0] if '.' in symbol else symbol
+
+        for suffix in EUROPEAN_EXCHANGES:
+            test_symbol = f"{base_symbol}{suffix}"
+            result = _fetch_yahoo_finance_single(test_symbol)
+            if result:
+                price, currency = result
+                # Prefer EUR for European exchanges
+                if currency == 'EUR' or (expected_currency and currency == expected_currency):
+                    logger.info(f"Yahoo: Found {test_symbol} = {price} {currency}")
+                    return price
+
+    return None
+
+def fetch_price(code: str, asset_class: str, currency: str = None) -> Optional[float]:
     """
     Fetch stock/ETF prices using multiple providers with fallback
     Priority: Alpha Vantage -> IEX Cloud -> Yahoo Finance
+
+    Args:
+        code: Symbol/ticker code
+        asset_class: Type of asset (stock, etf, equity, commodity)
+        currency: Expected currency (EUR, USD, etc.) - helps find correct exchange
     """
     # Skip non-tradeable assets
-    if asset_class.lower() not in ['stock', 'etf', 'equity']:
+    if asset_class.lower() not in ['stock', 'etf', 'equity', 'commodity']:
         logger.info(f"Skipping {code} - asset_class '{asset_class}' not supported for stock fetching")
         return None
 
@@ -145,11 +191,17 @@ def fetch_price(code: str, asset_class: str) -> Optional[float]:
             return cached_price
 
     # Try providers in priority order
-    providers = [
-        ("Alpha Vantage", _fetch_alpha_vantage_price),
-        ("IEX Cloud", _fetch_iex_cloud_price),
-        ("Yahoo Finance", _fetch_yahoo_finance_price)
-    ]
+    # For European securities (EUR currency), skip US-only providers and go straight to Yahoo
+    if currency and currency.upper() == 'EUR':
+        providers = [
+            ("Yahoo Finance", lambda s: _fetch_yahoo_finance_price(s, expected_currency='EUR'))
+        ]
+    else:
+        providers = [
+            ("Alpha Vantage", _fetch_alpha_vantage_price),
+            ("IEX Cloud", _fetch_iex_cloud_price),
+            ("Yahoo Finance", lambda s: _fetch_yahoo_finance_price(s, expected_currency=currency))
+        ]
 
     for provider_name, fetch_func in providers:
         try:

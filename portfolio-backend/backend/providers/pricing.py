@@ -68,29 +68,20 @@ def run_price_cycle(s: Session):
         else:
             commodity_instruments.append(inst)
     
-    # Bulk fetch stock prices
+    # Fetch stock prices individually to pass currency info for European exchange detection
     if stock_instruments:
         print(f"Starting stock price fetch for {len(stock_instruments)} stocks...")
-        print(f"Symbols: {[inst.code for inst in stock_instruments]}")
-        try:
-            stock_prices = listed.fetch_bulk_prices([inst.code for inst in stock_instruments])
-            print(f"Bulk fetch returned {len(stock_prices)} prices: {list(stock_prices.keys())}")
-            for inst in stock_instruments:
-                if inst.code in stock_prices:
-                    s.add(Price(instrument_id=inst.id, price=float(stock_prices[inst.code])))
-                    print(f"Added price for {inst.code}: {stock_prices[inst.code]}")
+        for inst in stock_instruments:
+            try:
+                print(f"Fetching {inst.code} (currency: {inst.currency})...")
+                px = listed.fetch_price(inst.code, inst.asset_class, inst.currency)
+                if px is not None:
+                    s.add(Price(instrument_id=inst.id, price=float(px)))
+                    print(f"Added price for {inst.code}: {px}")
                 else:
                     print(f"No price returned for {inst.code}")
-        except Exception as e:
-            print(f"Bulk stock fetch error: {e}")
-            # Fallback to individual calls
-            for inst in stock_instruments:
-                try:
-                    px = listed.fetch_price(inst.code, inst.asset_class)
-                    if px is not None:
-                        s.add(Price(instrument_id=inst.id, price=float(px)))
-                except Exception as e:
-                    print(f"Stock price fetch error for {inst.code}: {e}")
+            except Exception as e:
+                print(f"Stock price fetch error for {inst.code}: {e}")
     
     # Handle cash instruments (always price = 1.0)
     for inst in cash_instruments:
@@ -114,18 +105,19 @@ def run_price_cycle(s: Session):
             else:
                 bonds.append(inst)
         
-        # Fetch commodity ETCs (like gold) using bulk method
+        # Fetch commodity ETCs (like gold) individually to pass currency info
         if actual_commodities:
-            try:
-                commodity_prices = listed.fetch_bulk_prices([inst.code for inst in actual_commodities])
-                for inst in actual_commodities:
-                    if inst.code in commodity_prices:
-                        s.add(Price(instrument_id=inst.id, price=float(commodity_prices[inst.code])))
-                        print(f"✅ Commodity {inst.code}: {commodity_prices[inst.code]}")
+            for inst in actual_commodities:
+                try:
+                    print(f"Fetching commodity {inst.code} (currency: {inst.currency})...")
+                    px = listed.fetch_price(inst.code, inst.asset_class, inst.currency)
+                    if px is not None:
+                        s.add(Price(instrument_id=inst.id, price=float(px)))
+                        print(f"✅ Commodity {inst.code}: {px}")
                     else:
                         print(f"❌ No price for commodity {inst.code}")
-            except Exception as e:
-                print(f"Bulk commodity fetch error: {e}")
+                except Exception as e:
+                    print(f"Commodity price fetch error for {inst.code}: {e}")
         
         # For bonds, skip pricing for now (they need special handling)
         for inst in bonds:
