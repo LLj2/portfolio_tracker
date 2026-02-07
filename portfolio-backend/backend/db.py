@@ -20,18 +20,34 @@ else:
 engine = create_engine(DB_URL, future=True, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
+def _ensure_instrument_type_column():
+    """Add instrument_type column to instruments table if it doesn't exist."""
+    from sqlalchemy import text, inspect
+    insp = inspect(engine)
+    cols = [c["name"] for c in insp.get_columns("instruments")]
+    if "instrument_type" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE instruments ADD COLUMN instrument_type VARCHAR DEFAULT 'Other'"))
+
 def init_db():
     Base.metadata.create_all(engine)
+    try:
+        _ensure_instrument_type_column()
+    except Exception:
+        pass  # table may not exist yet on first run
 
-def upsert_instrument(s, code, name, asset_class, currency):
+def upsert_instrument(s, code, name, asset_class, currency, instrument_type=None):
     inst = s.query(Instrument).filter(Instrument.code==code).one_or_none()
     if not inst:
-        inst = Instrument(code=code, name=name, asset_class=asset_class, currency=currency)
+        inst = Instrument(code=code, name=name, asset_class=asset_class, currency=currency,
+                          instrument_type=instrument_type or "Other")
         s.add(inst); s.flush()
     else:
         inst.name = name or inst.name
         inst.asset_class = asset_class or inst.asset_class
         inst.currency = currency or inst.currency
+        if instrument_type:
+            inst.instrument_type = instrument_type
     return inst
 
 def upsert_position(s, account_id, instrument_id, quantity, cost_basis, entry_total):

@@ -458,6 +458,116 @@
             min-width: 200px;
         }
         
+        /* Holdings Summary Cards */
+        .holdings-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .holdings-summary-card {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .holdings-summary-card .label {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .holdings-summary-card .value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* Type Badges */
+        .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .type-badge.badge-stock   { background: #dbeafe; color: #1e40af; }
+        .type-badge.badge-etf     { background: #e0e7ff; color: #3730a3; }
+        .type-badge.badge-etc     { background: #fef3c7; color: #92400e; }
+        .type-badge.badge-fund    { background: #fce7f3; color: #9d174d; }
+        .type-badge.badge-crypto  { background: #ede9fe; color: #6d28d9; }
+        .type-badge.badge-p2p     { background: #ccfbf1; color: #115e59; }
+        .type-badge.badge-cash    { background: #f1f5f9; color: #475569; }
+        .type-badge.badge-other   { background: #f1f5f9; color: #64748b; }
+
+        /* Group & Subgroup Headers */
+        .group-header {
+            cursor: pointer;
+            background: #f0f4f8;
+            font-weight: 600;
+        }
+        .group-header:hover {
+            background: #e2e8f0;
+        }
+        .group-header td {
+            padding: 10px 8px !important;
+            border-bottom: 2px solid #cbd5e1 !important;
+        }
+        .group-toggle {
+            display: inline-block;
+            transition: transform 0.2s;
+            margin-right: 6px;
+            font-size: 12px;
+        }
+        .group-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+        .group-totals {
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .subgroup-header td {
+            padding: 6px 8px !important;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0 !important;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        /* Active Filter Highlight */
+        .filter-select.active {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+        .search-input.active {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+
+        /* Filter count badge */
+        .filter-count {
+            display: inline-block;
+            background: #3b82f6;
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        @media (max-width: 640px) {
+            .holdings-summary {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* History Page Styles */
         .performance-grid {
             display: grid;
@@ -1204,12 +1314,31 @@
 
             <!-- Holdings Page -->
             <div id="holdings-page" class="page">
+                <!-- Summary Cards -->
+                <div class="holdings-summary" id="holdings-summary">
+                    <div class="holdings-summary-card">
+                        <div class="label">Positions</div>
+                        <div class="value" id="holdings-count">—</div>
+                    </div>
+                    <div class="holdings-summary-card">
+                        <div class="label">Total Value</div>
+                        <div class="value" id="holdings-total-value">—</div>
+                    </div>
+                    <div class="holdings-summary-card">
+                        <div class="label">Unrealized P&L</div>
+                        <div class="value" id="holdings-total-pnl">—</div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">Holdings</div>
+                        <div class="card-title">Holdings <span id="holdings-filter-count"></span></div>
                         <div class="filters">
                             <select class="filter-select" id="sleeve-filter">
                                 <option value="">All Sleeves</option>
+                            </select>
+                            <select class="filter-select" id="type-filter">
+                                <option value="">All Types</option>
                             </select>
                             <select class="filter-select" id="account-filter">
                                 <option value="">All Accounts</option>
@@ -1228,7 +1357,7 @@
                                 <thead>
                                     <tr>
                                         <th>Name</th>
-                                        <th>Sleeve</th>
+                                        <th>Type</th>
                                         <th>Account</th>
                                         <th>Qty</th>
                                         <th>Price</th>
@@ -1630,38 +1759,212 @@
         async function loadHoldings() {
             try {
                 const response = await fetch(`${API_BASE}/portfolio/positions`);
-                const positions = await response.json();
-
-                const tbody = document.getElementById('holdings-tbody');
-                tbody.innerHTML = positions.map(pos => {
-                    const pnl = pos.unrealized_pnl || 0;
-                    const pnlPct = pos.pnl_percentage || 0;
-                    const pnlColor = pnl >= 0 ? '#166534' : '#dc2626';
-                    const pnlBg = pnl >= 0 ? '#dcfce7' : '#fef2f2';
-                    const pnlSign = pnl >= 0 ? '+' : '';
-                    const costBasis = pos.cost_basis_eur || 0;
-
-                    return `
-                    <tr onclick="showPosition('${pos.code}')">
-                        <td>${pos.name}</td>
-                        <td>${pos.asset_class}</td>
-                        <td>${pos.account}</td>
-                        <td>${formatNumber(pos.quantity)}</td>
-                        <td>€${formatNumber(pos.price_eur)}</td>
-                        <td>€${formatNumber(pos.value_eur)}</td>
-                        <td>${costBasis > 0 ? '€' + formatNumber(costBasis) : '—'}</td>
-                        <td>${costBasis > 0 ? `<span style="color: ${pnlColor}; background: ${pnlBg}; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${pnlSign}${pnlPct.toFixed(1)}%</span>` : '—'}</td>
-                        <td>${(pos.weight * 100).toFixed(1)}%</td>
-                        <td><span class="freshness-chip ${pos.freshness}">${pos.freshness.toUpperCase()}</span></td>
-                    </tr>
-                `}).join('');
-
+                holdingsData = await response.json();
+                populateHoldingsFilters(holdingsData);
+                renderHoldings(holdingsData);
             } catch (error) {
                 document.getElementById('holdings-tbody').innerHTML = `
                     <tr><td colspan="10" style="text-align: center; padding: 40px; color: #dc2626;">
                         Failed to load holdings data
                     </td></tr>
                 `;
+            }
+        }
+
+        function populateHoldingsFilters(positions) {
+            const sleeves = [...new Set(positions.map(p => p.asset_class))].sort();
+            const types = [...new Set(positions.map(p => p.instrument_type || 'Other'))].sort();
+            const accounts = [...new Set(positions.map(p => p.account))].sort();
+
+            const sleeveFilter = document.getElementById('sleeve-filter');
+            const savedSleeve = sleeveFilter.value;
+            sleeveFilter.innerHTML = '<option value="">All Sleeves</option>' +
+                sleeves.map(s => `<option value="${s}">${s}</option>`).join('');
+            sleeveFilter.value = savedSleeve;
+
+            const typeFilter = document.getElementById('type-filter');
+            const savedType = typeFilter.value;
+            typeFilter.innerHTML = '<option value="">All Types</option>' +
+                types.map(t => `<option value="${t}">${t}</option>`).join('');
+            typeFilter.value = savedType;
+
+            const accountFilter = document.getElementById('account-filter');
+            const savedAccount = accountFilter.value;
+            accountFilter.innerHTML = '<option value="">All Accounts</option>' +
+                accounts.map(a => `<option value="${a}">${a}</option>`).join('');
+            accountFilter.value = savedAccount;
+        }
+
+        function getFilteredPositions(positions) {
+            const sleeve = document.getElementById('sleeve-filter').value;
+            const type = document.getElementById('type-filter').value;
+            const account = document.getElementById('account-filter').value;
+            const freshness = document.getElementById('freshness-filter').value;
+            const search = document.getElementById('search-input').value.toLowerCase().trim();
+
+            let filtered = positions;
+            if (sleeve)    filtered = filtered.filter(p => p.asset_class === sleeve);
+            if (type)      filtered = filtered.filter(p => (p.instrument_type || 'Other') === type);
+            if (account)   filtered = filtered.filter(p => p.account === account);
+            if (freshness) filtered = filtered.filter(p => p.freshness === freshness);
+            if (search)    filtered = filtered.filter(p =>
+                p.name.toLowerCase().includes(search) ||
+                p.code.toLowerCase().includes(search) ||
+                p.account.toLowerCase().includes(search)
+            );
+
+            // Update filter count badge
+            const countEl = document.getElementById('holdings-filter-count');
+            if (filtered.length < positions.length) {
+                countEl.innerHTML = `<span class="filter-count">${filtered.length} of ${positions.length}</span>`;
+            } else {
+                countEl.innerHTML = '';
+            }
+
+            // Highlight active filters
+            document.getElementById('sleeve-filter').classList.toggle('active', !!sleeve);
+            document.getElementById('type-filter').classList.toggle('active', !!type);
+            document.getElementById('account-filter').classList.toggle('active', !!account);
+            document.getElementById('freshness-filter').classList.toggle('active', !!freshness);
+            document.getElementById('search-input').classList.toggle('active', !!search);
+
+            return filtered;
+        }
+
+        function typeBadgeClass(instrumentType) {
+            const map = {
+                'Stock': 'badge-stock',
+                'ETF': 'badge-etf',
+                'ETC': 'badge-etc',
+                'Fund': 'badge-fund',
+                'Crypto': 'badge-crypto',
+                'P2P': 'badge-p2p',
+                'Cash': 'badge-cash',
+            };
+            return map[instrumentType] || 'badge-other';
+        }
+
+        function renderHoldings(allPositions) {
+            const positions = getFilteredPositions(allPositions);
+
+            // Update summary cards
+            const totalValue = positions.reduce((s, p) => s + p.value_eur, 0);
+            const totalCost = positions.reduce((s, p) => s + (p.cost_basis_eur || 0), 0);
+            const totalPnl = positions.reduce((s, p) => s + (p.unrealized_pnl || 0), 0);
+            const pnlPct = totalCost > 0 ? (totalPnl / totalCost * 100) : 0;
+
+            document.getElementById('holdings-count').textContent = positions.length;
+            document.getElementById('holdings-total-value').textContent = `€${formatNumber(totalValue)}`;
+
+            const pnlEl = document.getElementById('holdings-total-pnl');
+            const pnlSign = totalPnl >= 0 ? '+' : '';
+            pnlEl.textContent = totalCost > 0 ? `${pnlSign}€${formatNumber(totalPnl)} (${pnlSign}${pnlPct.toFixed(1)}%)` : '—';
+            pnlEl.style.color = totalPnl >= 0 ? '#166534' : '#dc2626';
+
+            // Group: asset_class → instrument_type → positions[]
+            const groups = {};
+            positions.forEach(pos => {
+                const sleeve = pos.asset_class;
+                const type = pos.instrument_type || 'Other';
+                if (!groups[sleeve]) groups[sleeve] = {};
+                if (!groups[sleeve][type]) groups[sleeve][type] = [];
+                groups[sleeve][type].push(pos);
+            });
+
+            // Sort groups by total value descending
+            const sortedSleeves = Object.keys(groups).sort((a, b) => {
+                const valA = Object.values(groups[a]).flat().reduce((s, p) => s + p.value_eur, 0);
+                const valB = Object.values(groups[b]).flat().reduce((s, p) => s + p.value_eur, 0);
+                return valB - valA;
+            });
+
+            const tbody = document.getElementById('holdings-tbody');
+            let html = '';
+
+            sortedSleeves.forEach(sleeve => {
+                const typeMap = groups[sleeve];
+                const allInGroup = Object.values(typeMap).flat();
+                const groupValue = allInGroup.reduce((s, p) => s + p.value_eur, 0);
+                const groupWeight = allInGroup.reduce((s, p) => s + p.weight, 0);
+                const typeCount = Object.keys(typeMap).length;
+
+                // Group header row (collapsible)
+                html += `<tr class="group-header" onclick="toggleGroup(this)" data-group="${sleeve}">
+                    <td colspan="6">
+                        <span class="group-toggle">▼</span>
+                        ${sleeve}
+                        <span style="font-weight: 400; color: #64748b; margin-left: 8px;">${allInGroup.length} positions</span>
+                    </td>
+                    <td colspan="4" style="text-align: right;">
+                        <span class="group-totals">€${formatNumber(groupValue)} &nbsp; ${(groupWeight * 100).toFixed(1)}%</span>
+                    </td>
+                </tr>`;
+
+                // Sort types by value
+                const sortedTypes = Object.keys(typeMap).sort((a, b) => {
+                    const valA = typeMap[a].reduce((s, p) => s + p.value_eur, 0);
+                    const valB = typeMap[b].reduce((s, p) => s + p.value_eur, 0);
+                    return valB - valA;
+                });
+
+                sortedTypes.forEach(type => {
+                    const typePositions = typeMap[type].sort((a, b) => b.value_eur - a.value_eur);
+
+                    // Subgroup header (only if the group has multiple types)
+                    if (typeCount > 1) {
+                        html += `<tr class="subgroup-header" data-parent="${sleeve}">
+                            <td colspan="10">
+                                <span class="type-badge ${typeBadgeClass(type)}">${type}</span>
+                                <span style="margin-left: 6px;">${typePositions.length} position${typePositions.length > 1 ? 's' : ''}</span>
+                            </td>
+                        </tr>`;
+                    }
+
+                    // Position rows
+                    typePositions.forEach(pos => {
+                        const pnl = pos.unrealized_pnl || 0;
+                        const pnlPctPos = pos.pnl_percentage || 0;
+                        const pnlColor = pnl >= 0 ? '#166534' : '#dc2626';
+                        const pnlBg = pnl >= 0 ? '#dcfce7' : '#fef2f2';
+                        const pnlSignPos = pnl >= 0 ? '+' : '';
+                        const costBasis = pos.cost_basis_eur || 0;
+
+                        html += `<tr data-parent="${sleeve}" onclick="showPosition('${pos.code}')">
+                            <td>
+                                <div style="font-weight: 500;">${pos.name}</div>
+                                <div style="font-size: 11px; color: #94a3b8;">${pos.code}</div>
+                            </td>
+                            <td><span class="type-badge ${typeBadgeClass(pos.instrument_type || 'Other')}">${pos.instrument_type || 'Other'}</span></td>
+                            <td>${pos.account}</td>
+                            <td>${formatNumber(pos.quantity)}</td>
+                            <td>€${formatNumber(pos.price_eur)}</td>
+                            <td>€${formatNumber(pos.value_eur)}</td>
+                            <td>${costBasis > 0 ? '€' + formatNumber(costBasis) : '—'}</td>
+                            <td>${costBasis > 0 ? `<span style="color: ${pnlColor}; background: ${pnlBg}; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${pnlSignPos}${pnlPctPos.toFixed(1)}%</span>` : '—'}</td>
+                            <td>${(pos.weight * 100).toFixed(1)}%</td>
+                            <td><span class="freshness-chip ${pos.freshness}">${pos.freshness.toUpperCase()}</span></td>
+                        </tr>`;
+                    });
+                });
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function toggleGroup(headerRow) {
+            const group = headerRow.dataset.group;
+            const toggle = headerRow.querySelector('.group-toggle');
+            const isCollapsed = toggle.classList.contains('collapsed');
+
+            toggle.classList.toggle('collapsed');
+
+            // Find all child rows for this group
+            let sibling = headerRow.nextElementSibling;
+            while (sibling && !sibling.classList.contains('group-header')) {
+                if (sibling.dataset.parent === group) {
+                    sibling.style.display = isCollapsed ? '' : 'none';
+                }
+                sibling = sibling.nextElementSibling;
             }
         }
         
@@ -2610,6 +2913,16 @@
             updateTotalAllocation();
         }
         
+        // Holdings filter event listeners
+        ['sleeve-filter', 'type-filter', 'account-filter', 'freshness-filter'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                if (holdingsData) renderHoldings(holdingsData);
+            });
+        });
+        document.getElementById('search-input').addEventListener('input', () => {
+            if (holdingsData) renderHoldings(holdingsData);
+        });
+
         // Auto-refresh dashboard every 30 seconds
         setInterval(() => {
             if (document.getElementById('dashboard-page').classList.contains('active')) {

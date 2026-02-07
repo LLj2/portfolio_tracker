@@ -33,6 +33,7 @@ class PositionDetail(BaseModel):
     name: str
     code: str
     asset_class: str
+    instrument_type: str = "Other"
     account: str
     quantity: float
     price_eur: float

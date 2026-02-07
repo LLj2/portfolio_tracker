@@ -11,6 +11,7 @@ class Instrument(Base):
     code: Mapped[str] = mapped_column(String, unique=True)  # ISIN or symbol (CRYPTO:BTC, LEND:ID)
     name: Mapped[str] = mapped_column(String)
     asset_class: Mapped[str] = mapped_column(String)        # Equity, Bonds, Fund, Crypto, Commodity, Lending, Cash, Other
+    instrument_type: Mapped[str] = mapped_column(String, default="Other", nullable=True)  # Stock, ETF, ETC, Fund, Crypto, P2P, Cash
     currency: Mapped[str] = mapped_column(String, default="EUR")
 
 class Account(Base):

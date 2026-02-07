@@ -271,6 +271,7 @@ def get_positions(s: Session) -> list[PositionDetail]:
             name=inst.name or inst.code,
             code=inst.code,
             asset_class=ASSET_NORMALIZE.get(inst.asset_class, inst.asset_class or "Other"),
+            instrument_type=getattr(inst, 'instrument_type', None) or "Other",
             account=acc.name,
             quantity=float(pos.quantity),
             price_eur=px_eur if px_eur > 0 else 0.0,

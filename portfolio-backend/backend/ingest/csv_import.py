@@ -70,14 +70,15 @@ def import_holdings_csv(session, csv_text: str) -> int:
         acc = _get_or_create_account(session, account_name, currency_hint=sample_ccy)
 
         csv_codes: Set[str] = set()
-        upserts: Dict[str, Tuple[float, float, float, str, str, str]] = {}
-        # code -> (qty, avg_price, entry_total, name, asset_class, currency)
+        upserts: Dict[str, Tuple[float, float, float, str, str, str, str]] = {}
+        # code -> (qty, avg_price, entry_total, name, asset_class, currency, instrument_type)
 
         for row in rows:
             name = (row.get("name") or "").strip()
             currency = (row.get("currency") or "EUR").strip()
             asset_class = _norm_class(row.get("asset_class") or "")
             code = (row.get("isin_or_symbol") or "").strip()
+            instrument_type = (row.get("instrument_type") or "Other").strip()
 
             # Auto-code CASH if missing code
             if (not code) and asset_class == "Cash":
@@ -108,16 +109,17 @@ def import_holdings_csv(session, csv_text: str) -> int:
                     print(f"DEBUG: SKIPPING crypto {code}: qty={qty}, code_empty={not code}")
                 continue
 
-            upserts[code] = (qty, avg_price, entry_total, name, asset_class, currency)
+            upserts[code] = (qty, avg_price, entry_total, name, asset_class, currency, instrument_type)
 
         # Upsert positions
-        for code, (qty, avg, total, name, asset_class, currency) in upserts.items():
+        for code, (qty, avg, total, name, asset_class, currency, instrument_type) in upserts.items():
             inst = db.upsert_instrument(
                 session,
                 code=code,
                 name=name,
                 asset_class=asset_class,
                 currency=currency,
+                instrument_type=instrument_type,
             )
             db.upsert_position(
                 session,
