@@ -2354,42 +2354,45 @@
                 return pointDate >= cutoffDate;
             });
             
-            if (filteredPoints.length < 2) {
+            // Skip leading zero-value snapshots (no prices fetched yet)
+            const meaningfulPoints = filteredPoints.filter(p => p.total_value_eur > 0);
+
+            if (meaningfulPoints.length < 2) {
                 document.getElementById('history-period-return').textContent = '—';
                 document.getElementById('history-best-day').textContent = '—';
                 document.getElementById('history-worst-day').textContent = '—';
                 return;
             }
-            
+
             // Calculate period return
-            const startValue = filteredPoints[0].total_value_eur;
-            const endValue = filteredPoints[filteredPoints.length - 1].total_value_eur;
+            const startValue = meaningfulPoints[0].total_value_eur;
+            const endValue = meaningfulPoints[meaningfulPoints.length - 1].total_value_eur;
             const periodReturn = ((endValue - startValue) / startValue) * 100;
             
             // Calculate daily changes
             let bestDay = { change: 0, date: '', value: 0 };
             let worstDay = { change: 0, date: '', value: 0 };
             let maxDrawdown = 0;
-            let peak = filteredPoints[0].total_value_eur;
-            
-            for (let i = 1; i < filteredPoints.length; i++) {
-                const prevValue = filteredPoints[i - 1].total_value_eur;
-                const currentValue = filteredPoints[i].total_value_eur;
-                const dailyChange = ((currentValue - prevValue) / prevValue) * 100;
-                
+            let peak = meaningfulPoints[0].total_value_eur;
+
+            for (let i = 1; i < meaningfulPoints.length; i++) {
+                const prevValue = meaningfulPoints[i - 1].total_value_eur;
+                const currentValue = meaningfulPoints[i].total_value_eur;
+                const dailyChange = prevValue > 0 ? ((currentValue - prevValue) / prevValue) * 100 : 0;
+
                 // Track best/worst days
                 if (dailyChange > bestDay.change) {
                     bestDay = {
                         change: dailyChange,
-                        date: new Date(filteredPoints[i].ts).toLocaleDateString(),
+                        date: new Date(meaningfulPoints[i].ts).toLocaleDateString(),
                         value: currentValue
                     };
                 }
-                
+
                 if (dailyChange < worstDay.change) {
                     worstDay = {
                         change: dailyChange,
-                        date: new Date(filteredPoints[i].ts).toLocaleDateString(),
+                        date: new Date(meaningfulPoints[i].ts).toLocaleDateString(),
                         value: currentValue
                     };
                 }
@@ -2426,7 +2429,7 @@
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Data Points</span>
-                    <span class="stat-value">${filteredPoints.length}</span>
+                    <span class="stat-value">${meaningfulPoints.length}</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-label">Period Start</span>
